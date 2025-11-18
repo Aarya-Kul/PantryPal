@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# bin/pantrypalrun
+
+# DB_PATH="var/pantrypal.sqlite3"
+
+# 1. Check if DB exists
+# if [ ! -f "$DB_PATH" ]; then
+#   echo "Error: can't find database $DB_PATH"
+#   echo "Try: ./bin/pantrypaldb create"
+#   exit 1
+# fi
+
+# 1. Run the dev server
+CMD="flask --app pantrypal --debug run --host 0.0.0.0 --port 8000"
+echo "+ $CMD"
+eval $CMD

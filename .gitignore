@@ -41,3 +41,22 @@ app-example
 # generated native folders
 /ios
 /android
+
+# -------------------------
+# Python backend ignores
+# -------------------------
+# Virtual environment
+env/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+
+# SQLite databases
+*.sqlite3

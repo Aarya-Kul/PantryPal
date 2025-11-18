@@ -1,50 +1,114 @@
-# Welcome to your Expo app 👋
+# PantryPal — Expo + Flask Application
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 📦 Project Structure & How This App Works
 
-## Get started
+This project contains **two major components**:
 
-1. Install dependencies
+### **1. `expo/` — The Mobile Frontend**
+The `expo/` directory contains an Expo (React Native) application. This handles:
+- All mobile UI
+- Screens and navigation (via file-based routing in `expo/app`)
+- Camera access, scanning, user flows
+- Communication with the Flask backend
 
-   ```bash
-   npm install
-   ```
+Expo provides fast refresh, mobile simulators, and QR-code previews for rapid development.
 
-2. Start the app
+The frontend runs on **http://0.0.0.0:8001/** in development.
 
-   ```bash
-   npx expo start
-   ```
+### **2. `backend/` — The Flask API Server**
+The `backend/` directory contains a Python Flask application. It powers:
+- Authentication and user/session handling
+- Database access and ORM models
+- Receipt uploading and processing
+- API endpoints consumed by the Expo frontend
 
-In the output, you'll find options to open the app in a
+The backend runs on **http://0.0.0.0:8000/** in development.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 🚀 Get Started
 
-## Get a fresh project
+### **1. Install dependencies**
 
-When you're ready, run:
+**Frontend (Expo):**
+```bash
+npm install
+```
 
+**Backend (Flask):**
+```bash
+cd backend
+python -m venv env
+source env/bin/activate  # On Windows: env\Scripts\activate
+pip install -r requirements.txt
+cd ..
+```
+
+### **2. Start the application**
+
+You have two options:
+
+#### **Option A: Single Command (Recommended)**
+```bash
+./start.sh
+```
+This launches both the Expo app and Flask backend simultaneously.
+
+When this runs, you'll see:
+- Flask backend running at `0.0.0.0:8000`
+- Expo dev server running at `0.0.0.0:8001`
+- Options to open the mobile app in:
+  - A development build
+  - Android emulator
+  - iOS simulator
+  - Expo Go
+
+#### **Option B: Separate Terminals**
+
+**Terminal 1 — Start the Flask Backend:**
+```bash
+cd backend
+source env/bin/activate  # On Windows: env\Scripts\activate
+python app.py
+```
+The backend will run at `http://0.0.0.0:8000/`
+
+**Terminal 2 — Start the Expo Frontend:**
+```bash
+npx expo start --port 8001
+```
+The Expo dev server will run at `http://0.0.0.0:8001/`
+
+When Expo starts, you'll see options to open the app in:
+- A development build
+- Android emulator
+- iOS simulator
+- Expo Go
+
+---
+
+## 📱 Expo Development Notes
+
+Once the Expo dev server is running, you can open the app in:
+- A development build
+- Android emulator
+- iOS simulator
+- Expo Go
+
+Learn more:
+- [Expo docs](https://docs.expo.dev)
+- [File-based routing](https://docs.expo.dev/router/introduction)
+- [Interactive tutorial](https://docs.expo.dev/tutorial/introduction/)
+
+If you ever want a clean starting point:
 ```bash
 npm run reset-project
 ```
+This moves starter code to `app-example/` and gives you an empty `app/` directory.
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+---
 
-## Learn more
+## 🧑‍🤝‍🧑 Join the Community
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo GitHub](https://github.com/expo/expo)
+- [Expo Discord](https://chat.expo.dev)
