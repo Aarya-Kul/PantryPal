@@ -30,9 +30,6 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
-
 # typescript
 *.tsbuildinfo
 
@@ -60,3 +57,13 @@ dist/
 
 # SQLite databases
 *.sqlite3
+
+# local env files for keys and other vars
+.env*.local
+.env
+
+# JSON and config files APIs
+backend/keys/
+
+# test files
+test.py
