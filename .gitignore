@@ -60,3 +60,9 @@ dist/
 
 # SQLite databases
 *.sqlite3
+
+# backend env files
+backend/.env
+backend/.env.*
+backend/.venv
+

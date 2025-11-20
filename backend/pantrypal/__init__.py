@@ -1,5 +1,8 @@
 """PantryPal package initializer."""
 import flask
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # app is a single object used by all the code modules in this package
 app = flask.Flask(__name__)  # pylint: disable=invalid-name
@@ -20,3 +23,9 @@ app.config.from_envvar('PANTRYPAL_SETTINGS', silent=True)
 # (Reference http://flask.pocoo.org/docs/patterns/packages/)  We're
 # going to tell pylint and pycodestyle to ignore this coding style violation.
 import pantrypal.api
+
+# Import and register blueprints
+from pantrypal.api.inventory_routes import inventory_bp
+from pantrypal.api.user_routes import user_bp
+app.register_blueprint(user_bp, url_prefix="/api")
+app.register_blueprint(inventory_bp, url_prefix="/api")

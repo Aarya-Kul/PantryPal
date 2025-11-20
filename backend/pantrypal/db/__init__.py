@@ -1,0 +1,1 @@
+"""PantryPal database package."""
