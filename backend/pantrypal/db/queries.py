@@ -1,4 +1,5 @@
 from .db_client import supabase_client
+from datetime import date, timedelta
 
 
 # create new profile
@@ -12,6 +13,7 @@ def create_profile(user_id, name=None, birthday=None):
     response = supabase_client.table("profile").insert(profile_data).execute()
     return response.data 
 
+
 # get existing or create new profile
 def get_or_create_profile(user_id, name=None, birthday=None):
     response = supabase_client.table("profile").select("*").eq("user_id", user_id).execute()
@@ -19,9 +21,9 @@ def get_or_create_profile(user_id, name=None, birthday=None):
     if response.data:
         return response.data[0] 
     
-
     return create_profile(user_id, name, birthday)[0]
     
+
 # create user
 def create_user(email, password, name, birthday=None):
     auth_response = supabase_client.auth.sign_up({
@@ -41,6 +43,7 @@ def create_user(email, password, name, birthday=None):
         "email": email,
         "profile": profile
     }
+
 
 # login user
 def login_user(email, password):
@@ -63,13 +66,7 @@ def login_user(email, password):
 
 
 # add inventory item
-def edit_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit):
-    item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
-    if not item_data.data:
-        raise ValueError(f"Item '{item_name}' does not exist.")
-
-    item_id = item_data.data[0]["item_id"]
-
+def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit):
     inventory_item_data = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date"
     ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
@@ -77,11 +74,8 @@ def edit_inventory_item(user_id, item_name, expiry_date, quantity_value, quantit
     if not inventory_item_data.data:
         raise ValueError("Item not found in user inventory.")
 
-    existing_item = inventory_item_data.data[0]
-    updated_quantity = existing_item["quantity_value"] + quantity_value
-
     updated_inventory = supabase_client.table("user_inventory").update({
-        "quantity_value": updated_quantity,
+        "quantity_value": quantity_value,
         "quantity_unit": quantity_unit
     }).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
 
@@ -89,18 +83,17 @@ def edit_inventory_item(user_id, item_name, expiry_date, quantity_value, quantit
 
 
 # add an inventory item
-def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit):
-    item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
+def add_inventory_item(user_id, item_id, item_name, expiry_date, quantity_value, quantity_unit):
+    if not item_id:
+        # insert item if it doesn't exist
+        item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
+        if not item_data.data:
+            new_item = supabase_client.table("items").insert({"item_name": item_name}).execute()
+            item_id = new_item.data[0]["item_id"]
+        else:
+            item_id = item_data.data[0]["item_id"]
 
-    # add the item
-    if not item_data.data:
-        new_item = supabase_client.table("items").insert({"item_name": item_name}).execute()
-        item_id = new_item.data[0]["item_id"]
-    else:
-        item_id = item_data.data[0]["item_id"]
-
-    # add record of user_id and item_id with the quantity info and expiry date info
-    # item not in inventory, insert new record
+    # insert into user_inventory
     new_inventory_item = supabase_client.table("user_inventory").insert({
         "user_id": user_id,
         "item_id": item_id,
@@ -113,13 +106,7 @@ def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity
 
 
 # remove an inventory item
-def remove_inventory_item(user_id, item_name, expiry_date):
-    item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
-    if not item_data.data:
-        raise ValueError(f"Item '{item_name}' not found.")
-
-    item_id = item_data.data[0]["item_id"]
-
+def remove_inventory_item(user_id, item_id, expiry_date):
     delete_result = supabase_client.table("user_inventory") \
         .delete() \
         .eq("user_id", user_id) \
@@ -127,17 +114,64 @@ def remove_inventory_item(user_id, item_name, expiry_date):
         .eq("expiry_date", expiry_date) \
         .execute()
 
-    return delete_result.data
-
-
-
-    return
+    return delete_result.data[0]
 
 
 # get inventory
 def get_user_inventory(user_id):
     response = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
-    ).eq("user_id", user_id).execute()
+    ).eq("user_id", user_id).order("expiry_date", ascending=True).execute()
 
     return response.data
+
+
+# get user preferences
+def get_user_preferences(user_id):
+    preferences = {}
+
+    macronutrient_preferences_data = supabase_client.table("user_macronutrient_preferences").select(
+        "macronutrients(macronutrient_name)"
+    ).eq("user_id", user_id).execute()
+
+    cuisine_preferences_data = supabase_client.table("user_cuisine_preferences").select(
+        "cuisines(cuisine_name)"
+    ).eq("user_id", user_id).execute()
+
+    dietary_restrictions_data = supabase_client.table("user_dietary_restrictions").select(
+        "dietary_restrictions(dietary_restriction_name)"
+    ).eq("user_id", user_id).execute()
+
+    preferences["macronutrient_preferences"] = [data['macronutrients']['macronutrient_name'] for data in macronutrient_preferences_data.data]
+    preferences["cuisine_preferences"] = [data['cuisines']['cuisine_name'] for data in cuisine_preferences_data.data]
+    preferences["dietary_restrictions"] = [data['dietary_restrictions']['dietary_restriction_name'] for data in dietary_restrictions_data.data]
+
+    return preferences
+
+
+# get expiring items
+def get_expiring_items(user_id):
+    notifications = {}
+    today = date.today()
+
+    week_notification_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+    ).eq("user_id", user_id) \
+     .gte("expiry_date", today + timedelta(days=3)) \
+     .lte("expiry_date", today + timedelta(days=7)) \
+     .order("expiry_date", ascending=True) \
+     .execute()
+
+
+    two_day_notification_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+    ).eq("user_id", user_id) \
+     .gte("expiry_date", today + timedelta(days=1)) \
+     .lte("expiry_date", today + timedelta(days=2)) \
+     .order("expiry_date", ascending=True) \
+     .execute()
+
+    notifications["1 week"] = week_notification_data.data
+    notifications["2 days"] = two_day_notification_data.data
+
+    return notifications
