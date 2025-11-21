@@ -4,7 +4,6 @@ from datetime import date, timedelta
 
 # create new profile
 def create_profile(user_id, name=None, birthday=None):
-    """Create a profile row for a Supabase Auth user."""
     profile_data = {
         "user_id": user_id,
         "name": name,
@@ -121,7 +120,7 @@ def remove_inventory_item(user_id, item_id, expiry_date):
 def get_user_inventory(user_id):
     response = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
-    ).eq("user_id", user_id).order("expiry_date", ascending=True).execute()
+    ).eq("user_id", user_id).order("expiry_date").execute()
 
     return response.data
 
@@ -149,6 +148,32 @@ def get_user_preferences(user_id):
     return preferences
 
 
+# add user preferences
+def add_user_preferences(user_id, preferences):
+    macronutrient_ids = preferences.get("macronutrient_preferences", [])
+    cuisine_ids = preferences.get("cuisine_preferences", [])
+    dietary_restriction_ids = preferences.get("dietary_restrictions", [])
+
+    for mid in macronutrient_ids:
+        supabase_client.table("user_macronutrient_preferences").upsert({
+            "user_id": user_id,
+            "macronutrient_id": mid
+        }).execute()
+
+    for cid in cuisine_ids:
+        supabase_client.table("user_cuisine_preferences").upsert({
+            "user_id": user_id,
+            "cuisine_id": cid
+        }).execute()
+
+    for drid in dietary_restriction_ids:
+        supabase_client.table("user_dietary_restrictions").upsert({
+            "user_id": user_id,
+            "dietary_restriction_id": drid
+        }).execute()
+
+
+
 # get expiring items
 def get_expiring_items(user_id):
     notifications = {}
@@ -159,7 +184,7 @@ def get_expiring_items(user_id):
     ).eq("user_id", user_id) \
      .gte("expiry_date", today + timedelta(days=3)) \
      .lte("expiry_date", today + timedelta(days=7)) \
-     .order("expiry_date", ascending=True) \
+     .order("expiry_date") \
      .execute()
 
 
@@ -168,7 +193,7 @@ def get_expiring_items(user_id):
     ).eq("user_id", user_id) \
      .gte("expiry_date", today + timedelta(days=1)) \
      .lte("expiry_date", today + timedelta(days=2)) \
-     .order("expiry_date", ascending=True) \
+     .order("expiry_date") \
      .execute()
 
     notifications["1 week"] = week_notification_data.data

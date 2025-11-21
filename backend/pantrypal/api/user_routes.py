@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from pantrypal.db.queries import create_user, login_user, get_user_preferences
+from pantrypal.db.queries import create_user, login_user, get_user_preferences, add_user_preferences
 from pantrypal.auth.auth_utils import authorize
 
 user_bp = Blueprint("users", __name__)
@@ -59,3 +59,15 @@ def get_preferences_route():
     preferences = get_user_preferences(user_id)
 
     return jsonify(preferences), 200
+
+
+@user_bp.route("/add_preferences", methods=["POST"])
+def add_preferences_route():
+    user_id, error = authorize(request)
+    if error:
+        return jsonify({"error": error}), 401
+
+    preferences = request.json
+    add_user_preferences(user_id, preferences)
+
+    return jsonify({"status": "success"}), 200
