@@ -13,7 +13,7 @@ import pantrypal
 
 load_dotenv()
 
-# Set Google credentials path from .env
+# Set credentials path from .env
 google_key_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if google_key_path:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = google_key_path
@@ -47,7 +47,6 @@ def scan_receipts(img_data):
 
         parsed_text = texts[0].description if texts else ""
 
-        # Log OCR output for debugging
         logger.info(f"OCR Text: {parsed_text}")
 
         return parsed_text
@@ -70,24 +69,22 @@ def gemini_generator(prompt):
         )
         # Get the raw text from the model
         generated_text = response.text
-        # Clean up any markdown/code formatting
+
         clean_json = generated_text.replace("```json", "").replace("```", "").strip()
         # Convert to Python dictionary
         return json.loads(clean_json)
 
     except Exception as e:
         logger.error(f"Gemini generation error: {e}")
-        raise  # Let the Flask route handle the error
+        raise
 
 @pantrypal.app.route('/upload_receipt/', methods=["POST"])
 def upload_receipt():
     image_file = request.files.get("data")
 
-    # Validate file presence
     if not image_file or image_file.filename == '':
         return jsonify({"error": "No image file provided"}), 400
 
-    # Validate file type
     if not allowed_file(image_file.filename):
         return jsonify({"error": "Unsupported file type"}), 400
 
@@ -97,7 +94,6 @@ def upload_receipt():
     # OCR with Google Vision
     text = scan_receipts(image_data)
 
-    # Build prompt for Gemini generator
     date_str = f"Today's date is {datetime.now().date()}. Message = "
     prompt = (
         date_str + "This is the current date " + text + 
@@ -111,7 +107,6 @@ def upload_receipt():
         """
     )
 
-    # Generate structured response with error handling
     try:
         response_data = gemini_generator(prompt)
     except Exception as e:

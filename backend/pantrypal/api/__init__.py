@@ -1,1 +1,1 @@
-from pantrypal.api.gemini_apis import upload_receipt
+from backend.pantrypal.api.ocr_apis import upload_receipt
