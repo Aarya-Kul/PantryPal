@@ -58,6 +58,11 @@ dist/
 # SQLite databases
 *.sqlite3
 
+# backend env files
+backend/.env
+backend/.env.*
+backend/.venv
+
 # local env files for keys and other vars
 .env*.local
 .env

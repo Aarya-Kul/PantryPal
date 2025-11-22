@@ -1,0 +1,226 @@
+from .db_client import supabase_client
+from datetime import date, timedelta
+
+
+# create new profile
+def create_profile(user_id, name=None, birthday=None):
+    profile_data = {
+        "user_id": user_id,
+        "name": name,
+        "birthday": birthday
+    }
+    response = supabase_client.table("profile").insert(profile_data).execute()
+    return response.data 
+
+
+# get existing or create new profile
+def get_or_create_profile(user_id, name=None, birthday=None):
+    response = supabase_client.table("profile").select("*").eq("user_id", user_id).execute()
+    
+    if response.data:
+        return response.data[0] 
+    
+    return create_profile(user_id, name, birthday)[0]
+    
+
+# create user
+def create_user(email, password, name, birthday=None):
+    auth_response = supabase_client.auth.sign_up({
+        "email": email,
+        "password": password
+    })
+
+    if not auth_response.user:
+        return None
+
+    user_id = auth_response.user.id
+
+    profile = get_or_create_profile(user_id, name, birthday)
+
+    return {
+        "user_id": user_id,
+        "email": email,
+        "profile": profile
+    }
+
+
+# login user
+def login_user(email, password):
+    auth_response = supabase_client.auth.sign_in_with_password({
+        "email": email,
+        "password": password
+    })
+
+    if not auth_response.user:
+        return None 
+
+    session = auth_response.session
+
+    return {
+        "user_id": auth_response.user.id,
+        "access_token": session.access_token,
+        "refresh_token": session.refresh_token,
+        "expires_in": session.expires_in
+    }
+
+
+# edit inventory item
+def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit):
+    inventory_item_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date"
+    ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    if not inventory_item_data.data:
+        raise ValueError("Item not found in user inventory.")
+
+    updated_inventory = supabase_client.table("user_inventory").update({
+        "quantity_value": quantity_value,
+        "quantity_unit": quantity_unit
+    }).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    return updated_inventory.data[0]
+
+
+# add inventory item
+def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, quantity_unit):
+    inventory_item_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date"
+    ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    if not inventory_item_data.data:
+        raise ValueError("Item not found in user inventory.")
+
+    quantity_value_after_deduct = inventory_item_data.data[0]["quantity_value"] - deduct_quantity_value
+
+    if quantity_value_after_deduct < 0:
+        raise ValueError("Cannot deduct more than available quantity.")
+    elif quantity_value_after_deduct == 0:
+        return remove_inventory_item(user_id, item_id, expiry_date)
+
+    updated_inventory = supabase_client.table("user_inventory").update({
+        "quantity_value": quantity_value_after_deduct,
+        "quantity_unit": quantity_unit
+    }).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    return updated_inventory.data[0]
+
+
+# add an inventory item
+def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit):
+    # insert item if it doesn't exist
+    item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
+
+    if not item_data.data:
+        new_item = supabase_client.table("items").insert({"item_name": item_name}).execute()
+        item_id = new_item.data[0]["item_id"]
+    else:
+        item_id = item_data.data[0]["item_id"]
+
+    # insert into user_inventory
+    new_inventory_item = supabase_client.table("user_inventory").insert({
+        "user_id": user_id,
+        "item_id": item_id,
+        "quantity_value": quantity_value,
+        "quantity_unit": quantity_unit,
+        "expiry_date": expiry_date
+    }).execute()
+
+    return new_inventory_item.data[0]
+
+
+# remove an inventory item
+def remove_inventory_item(user_id, item_id, expiry_date):
+    delete_result = supabase_client.table("user_inventory") \
+        .delete() \
+        .eq("user_id", user_id) \
+        .eq("item_id", item_id) \
+        .eq("expiry_date", expiry_date) \
+        .execute()
+
+    return delete_result.data[0]
+
+
+# get inventory
+def get_user_inventory(user_id):
+    response = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+    ).eq("user_id", user_id).order("expiry_date").execute()
+
+    return response.data
+
+
+# get user preferences
+def get_user_preferences(user_id):
+    preferences = {}
+
+    macronutrient_preferences_data = supabase_client.table("user_macronutrient_preferences").select(
+        "macronutrients(macronutrient_name)"
+    ).eq("user_id", user_id).execute()
+
+    cuisine_preferences_data = supabase_client.table("user_cuisine_preferences").select(
+        "cuisines(cuisine_name)"
+    ).eq("user_id", user_id).execute()
+
+    dietary_restrictions_data = supabase_client.table("user_dietary_restrictions").select(
+        "dietary_restrictions(dietary_restriction_name)"
+    ).eq("user_id", user_id).execute()
+
+    preferences["macronutrient_preferences"] = [data['macronutrients']['macronutrient_name'] for data in macronutrient_preferences_data.data]
+    preferences["cuisine_preferences"] = [data['cuisines']['cuisine_name'] for data in cuisine_preferences_data.data]
+    preferences["dietary_restrictions"] = [data['dietary_restrictions']['dietary_restriction_name'] for data in dietary_restrictions_data.data]
+
+    return preferences
+
+
+# add user preferences
+def add_user_preferences(user_id, preferences):
+    macronutrient_ids = preferences.get("macronutrient_preferences", [])
+    cuisine_ids = preferences.get("cuisine_preferences", [])
+    dietary_restriction_ids = preferences.get("dietary_restrictions", [])
+
+    for mid in macronutrient_ids:
+        supabase_client.table("user_macronutrient_preferences").upsert({
+            "user_id": user_id,
+            "macronutrient_id": mid
+        }).execute()
+
+    for cid in cuisine_ids:
+        supabase_client.table("user_cuisine_preferences").upsert({
+            "user_id": user_id,
+            "cuisine_id": cid
+        }).execute()
+
+    for drid in dietary_restriction_ids:
+        supabase_client.table("user_dietary_restrictions").upsert({
+            "user_id": user_id,
+            "dietary_restriction_id": drid
+        }).execute()
+
+
+
+# get expiring items
+def get_expiring_items(user_id):
+    notifications = {}
+    today = date.today()
+
+    week_notification_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+    ).eq("user_id", user_id) \
+     .gte("expiry_date", today + timedelta(days=3)) \
+     .lte("expiry_date", today + timedelta(days=7)) \
+     .order("expiry_date") \
+     .execute()
+
+
+    two_day_notification_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+    ).eq("user_id", user_id) \
+     .gte("expiry_date", today + timedelta(days=1)) \
+     .lte("expiry_date", today + timedelta(days=2)) \
+     .order("expiry_date") \
+     .execute()
+
+    notifications["1 week"] = week_notification_data.data
+    notifications["2 days"] = two_day_notification_data.data
+
+    return notifications
