@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from pantrypal.db.queries import get_user_inventory, edit_inventory_item, add_inventory_item, remove_inventory_item, get_expiring_items
+from pantrypal.db.queries import get_user_inventory, edit_inventory_item, add_inventory_item, deduct_inventory_item, remove_inventory_item, get_expiring_items
 from pantrypal.auth.auth_utils import authorize
 
 inventory_bp = Blueprint("inventory", __name__)
@@ -27,13 +27,12 @@ def add_inventory_item_route():
 
     for item in items:
         try:
-            item_id = item.get("item_id")
             item_name = item["item_name"]
             expiry_date = item["expiry_date"]
             quantity_value = item["quantity_value"]
             quantity_unit = item["quantity_unit"]
 
-            to_add = add_inventory_item(user_id, item_id, item_name, expiry_date, quantity_value, quantity_unit)
+            to_add = add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit)
             added_items.append(to_add)
 
         except Exception as e:
@@ -75,6 +74,37 @@ def edit_inventory_item_route():
             })
 
     return jsonify(edited_items), 200
+
+
+@inventory_bp.route("/deduct_inventory_item", methods=["POST"])
+def deduct_inventory_item_route():
+    user_id, error = authorize(request)
+    if error:
+        return jsonify({"error": error}), 401
+
+    data = request.json
+    items = data["items"]
+
+    deducted_items = []
+
+    for item in items:
+        try:
+            item_id = item["item_id"]
+            expiry_date = item["expiry_date"]
+            quantity_value = item["quantity_value"]
+            quantity_unit = item["quantity_unit"]
+
+            to_deduct = deduct_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit)
+            deducted_items.append(to_deduct)
+
+        except Exception as e:
+            deducted_items.append({
+                "item": item,
+                "status": "error",
+                "error": str(e)
+            })
+
+    return jsonify(deducted_items), 200
 
 
 @inventory_bp.route("/remove_inventory_item", methods=["DELETE"])

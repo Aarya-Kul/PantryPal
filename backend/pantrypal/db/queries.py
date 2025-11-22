@@ -64,7 +64,7 @@ def login_user(email, password):
     }
 
 
-# add inventory item
+# edit inventory item
 def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit):
     inventory_item_data = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date"
@@ -81,16 +81,40 @@ def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_
     return updated_inventory.data[0]
 
 
+# add inventory item
+def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, quantity_unit):
+    inventory_item_data = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date"
+    ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    if not inventory_item_data.data:
+        raise ValueError("Item not found in user inventory.")
+
+    quantity_value_after_deduct = inventory_item_data.data[0]["quantity_value"] - deduct_quantity_value
+
+    if quantity_value_after_deduct < 0:
+        raise ValueError("Cannot deduct more than available quantity.")
+    elif quantity_value_after_deduct == 0:
+        return remove_inventory_item(user_id, item_id, expiry_date)
+
+    updated_inventory = supabase_client.table("user_inventory").update({
+        "quantity_value": quantity_value_after_deduct,
+        "quantity_unit": quantity_unit
+    }).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    return updated_inventory.data[0]
+
+
 # add an inventory item
-def add_inventory_item(user_id, item_id, item_name, expiry_date, quantity_value, quantity_unit):
-    if not item_id:
-        # insert item if it doesn't exist
-        item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
-        if not item_data.data:
-            new_item = supabase_client.table("items").insert({"item_name": item_name}).execute()
-            item_id = new_item.data[0]["item_id"]
-        else:
-            item_id = item_data.data[0]["item_id"]
+def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit):
+    # insert item if it doesn't exist
+    item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
+
+    if not item_data.data:
+        new_item = supabase_client.table("items").insert({"item_name": item_name}).execute()
+        item_id = new_item.data[0]["item_id"]
+    else:
+        item_id = item_data.data[0]["item_id"]
 
     # insert into user_inventory
     new_inventory_item = supabase_client.table("user_inventory").insert({
