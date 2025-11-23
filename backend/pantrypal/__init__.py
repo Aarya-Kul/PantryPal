@@ -1,8 +1,16 @@
 """PantryPal package initializer."""
 import flask
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
 
 # app is a single object used by all the code modules in this package
 app = flask.Flask(__name__)  # pylint: disable=invalid-name
@@ -27,5 +35,9 @@ import pantrypal.api
 # Import and register blueprints
 from pantrypal.api.inventory_routes import inventory_bp
 from pantrypal.api.user_routes import user_bp
-app.register_blueprint(user_bp, url_prefix="/api")
+from pantrypal.api.receipt_routes import receipt_bp
+from pantrypal.api.recipe_routes import recipes_bp
 app.register_blueprint(inventory_bp, url_prefix="/api")
+app.register_blueprint(user_bp, url_prefix="/api")
+app.register_blueprint(receipt_bp, url_prefix="/api") 
+app.register_blueprint(recipes_bp, url_prefix="/api")

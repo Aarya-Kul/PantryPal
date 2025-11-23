@@ -1,6 +1,7 @@
 """PantryPal development configuration."""
 
 import pathlib
+import logging
 
 # Root of this application, useful if it doesn't occupy an entire domain
 APPLICATION_ROOT = '/'
@@ -17,4 +18,3 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024
 
 # Database file is var/pantrypal.sqlite3
 DATABASE_FILENAME = PANTRYPAL_ROOT/'var'/'pantrypal.sqlite3'
-

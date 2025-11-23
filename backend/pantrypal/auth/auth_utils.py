@@ -1,8 +1,9 @@
 from flask import request
+import logging
 from pantrypal.db.db_client import supabase_client
 import jwt
 
-
+logger = logging.getLogger(__name__)
 # def authorize(request):
 #     auth_header = request.headers.get("Authorization")
 
@@ -40,6 +41,7 @@ def authorize(request):
         if not user_response or not user_response.user:
             return None, "Invalid or expired access token"
 
+        logger.info("Successful login for user: %s", user_response.user.id)
         return user_response.user.id, None  # success
 
     except Exception as e:

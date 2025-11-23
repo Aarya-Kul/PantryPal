@@ -1,0 +1,96 @@
+{
+  "pantry": [
+    {
+      "name": "bananas cavendish",
+      "quantity_value": 2,
+      "quantity_unit": "unit",
+      "expiry_date": "2025-11-29"
+    },
+    {
+      "name": "potatoes brushed",
+      "quantity_value": 1.328,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-12-20"
+    },
+    {
+      "name": "grape tomatoes",
+      "quantity_value": 1,
+      "quantity_unit": "package",
+      "expiry_date": "2025-11-29"
+    },
+    {
+      "name": "penne pasta",
+      "quantity_value": 500,
+      "quantity_unit": "g",
+      "expiry_date": "2026-11-22"
+    },
+    {
+      "name": "rolled oats",
+      "quantity_value": 500,
+      "quantity_unit": "g",
+      "expiry_date": "2026-08-19"
+    },
+    {
+      "name": "black beans",
+      "quantity_value": 400,
+      "quantity_unit": "g",
+      "expiry_date": "2027-11-22"
+    },
+    {
+      "name": "canned corn",
+      "quantity_value": 400,
+      "quantity_unit": "g",
+      "expiry_date": "2027-11-22"
+    }
+  ],
+  "fridge": [
+    {
+      "name": "zucchinis green",
+      "quantity_value": 0.778,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-12-02"
+    },
+    {
+      "name": "broccoli",
+      "quantity_value": 0.808,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-11-28"
+    },
+    {
+      "name": "brussel sprouts",
+      "quantity_value": 0.322,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-12-02"
+    },
+    {
+      "name": "grapes green",
+      "quantity_value": 1.174,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-12-02"
+    },
+    {
+      "name": "snow peas",
+      "quantity_value": 0.218,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-11-28"
+    },
+    {
+      "name": "iceberg lettuce",
+      "quantity_value": 1,
+      "quantity_unit": "unit",
+      "expiry_date": "2025-12-02"
+    },
+    {
+      "name": "full cream milk",
+      "quantity_value": 2,
+      "quantity_unit": "L",
+      "expiry_date": "2025-11-29"
+    },
+    {
+      "name": "greek yogurt",
+      "quantity_value": 1,
+      "quantity_unit": "kg",
+      "expiry_date": "2025-12-02"
+    }
+  ]
+}
