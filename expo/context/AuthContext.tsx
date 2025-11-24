@@ -1,9 +1,10 @@
-// expo/context/AuthContext.tsx
+// context/AuthContext.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
-    createContext,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 type AuthContextValue = {
@@ -20,26 +21,34 @@ const AuthContext = createContext<AuthContextValue>({
   logout: async () => {},
 });
 
+const TOKEN_STORAGE_KEY = "auth_token";
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // Dev token so recipes work before real login
-  const [token, setToken] = useState<string | null>(
-    __DEV__
-      ? "CREATE OWN JWT TOKEN"
-      : null
-  );
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // For now, just mark loading false on mount (no persistence)
+  // Restore token on app launch
   useEffect(() => {
-    setLoading(false);
+    const restoreToken = async () => {
+      try {
+        const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        if (storedToken) {
+          setToken(storedToken);
+        }
+      } catch (e) {
+        console.warn("Failed to restore token", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreToken();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // This is the standard place you'd call your real /login route.
-    // For now you can just mock it or keep this for later.
-    const res = await fetch("http://localhost:8000/login", {
+    const res = await fetch("http://127.0.0.1:8000/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -50,13 +59,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(err.error || "Login failed");
     }
 
-    const data = await res.json(); // expects { access_token: "..." }
-    const newToken = data.access_token;
+    const data = await res.json();
+    const newToken = data.access_token as string;
+
+    if (!newToken) {
+      throw new Error("No access token returned from server");
+    }
+
     setToken(newToken);
+    await AsyncStorage.setItem(TOKEN_STORAGE_KEY, newToken);
   };
 
   const logout = async () => {
     setToken(null);
+    try {
+      await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch (e) {
+      console.warn("Failed to clear token", e);
+    }
   };
 
   return (
