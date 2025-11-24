@@ -65,6 +65,24 @@ def login_user(email, password):
         "expires_in": session.expires_in
     }
 
+# ask Supabase Auth to send a password reset email
+def send_password_reset(email: str):
+    redirect_url = "http://localhost:8081/update-password"
+
+    response = supabase_client.auth.reset_password_for_email(
+        email,
+        {
+            "redirect_to": redirect_url,
+        },
+    )
+
+    # Supabase Python client returns an AuthResponse with an error attribute if something went wrong
+    error = getattr(response, "error", None)
+    if error:
+        raise ValueError(error.message)
+
+    return True
+
 
 # edit inventory item
 def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit):

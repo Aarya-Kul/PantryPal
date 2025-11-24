@@ -36,8 +36,12 @@ function RootNavigator() {
           />
         </>
       ) : (
-        // Not logged in → only Login screen
-        <Stack.Screen name="login" />
+        <>
+          <Stack.Screen name="login" />
+          <Stack.Screen name="signup" />
+          <Stack.Screen name="forgot-password" />
+          <Stack.Screen name="update-password" />
+        </>
       )}
     </Stack>
   );

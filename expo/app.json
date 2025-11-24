@@ -8,6 +8,10 @@
     "scheme": "pantrypal",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "EXPO_PUBLIC_SUPABASE_URL": "https://csmvgruvbqqfjryiklrx.supabase.co",
+      "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_edtZmvsSMpNYJZ9_vI6YtA_xIymfMWe"
+    },
     "ios": {
       "supportsTablet": true
     },
