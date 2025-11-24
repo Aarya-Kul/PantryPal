@@ -3,3 +3,4 @@ supabase
 python-dotenv
 google-genai
 google-cloud-vision
+flask_cors

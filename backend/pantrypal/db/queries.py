@@ -115,6 +115,7 @@ def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity
         item_id = new_item.data[0]["item_id"]
     else:
         item_id = item_data.data[0]["item_id"]
+        # check if item exists in user inventory, update with new quantity value = existing + `quantity_value`
 
     # insert into user_inventory
     new_inventory_item = supabase_client.table("user_inventory").insert({

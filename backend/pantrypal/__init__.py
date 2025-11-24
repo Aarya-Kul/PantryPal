@@ -1,5 +1,6 @@
 """PantryPal package initializer."""
 import flask
+from flask_cors import CORS
 from dotenv import load_dotenv
 import logging
 
@@ -14,6 +15,13 @@ logging.basicConfig(
 
 # app is a single object used by all the code modules in this package
 app = flask.Flask(__name__)  # pylint: disable=invalid-name
+
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 # Read settings from config module (pantrypal/config.py)
 app.config.from_object('pantrypal.config')
