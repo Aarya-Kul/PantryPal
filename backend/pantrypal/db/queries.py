@@ -1,6 +1,8 @@
 from .db_client import supabase_client
 from datetime import date, timedelta
+import logging
 
+logger = logging.getLogger(__name__)
 
 # create new profile
 def create_profile(user_id, name=None, birthday=None):
@@ -83,18 +85,20 @@ def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_
 
 # add inventory item
 def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, quantity_unit):
-    inventory_item_data = supabase_client.table("user_inventory").select(
+    inventory_item = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date"
     ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
 
-    if not inventory_item_data.data:
+    if not inventory_item.data:
         raise ValueError("Item not found in user inventory.")
+    
+    if quantity_unit != inventory_item.data[0]["quantity_unit"]:
+        # make call to llm to do conversion b/c units are different
+        logger.info("making call to llm to do conversion b/c units are different")
 
-    quantity_value_after_deduct = inventory_item_data.data[0]["quantity_value"] - deduct_quantity_value
+    quantity_value_after_deduct = inventory_item.data[0]["quantity_value"] - deduct_quantity_value
 
-    if quantity_value_after_deduct < 0:
-        raise ValueError("Cannot deduct more than available quantity.")
-    elif quantity_value_after_deduct == 0:
+    if quantity_value_after_deduct <= 0:
         return remove_inventory_item(user_id, item_id, expiry_date)
 
     updated_inventory = supabase_client.table("user_inventory").update({
@@ -115,16 +119,33 @@ def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity
         item_id = new_item.data[0]["item_id"]
     else:
         item_id = item_data.data[0]["item_id"]
-        # check if item exists in user inventory, update with new quantity value = existing + `quantity_value`
 
-    # insert into user_inventory
-    new_inventory_item = supabase_client.table("user_inventory").insert({
-        "user_id": user_id,
-        "item_id": item_id,
-        "quantity_value": quantity_value,
-        "quantity_unit": quantity_unit,
-        "expiry_date": expiry_date
-    }).execute()
+    # check if item exists in user inventory, update with new quantity value = existing + `quantity_value`
+    user_inventory_item = supabase_client.table("user_inventory").select(
+        "*"
+    ).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
+
+    if not user_inventory_item.data:
+        # insert new item into user_inventory
+        new_inventory_item = supabase_client.table("user_inventory").insert({
+            "user_id": user_id,
+            "item_id": item_id,
+            "quantity_value": quantity_value,
+            "quantity_unit": quantity_unit,
+            "expiry_date": expiry_date
+        }).execute()
+    
+    else:
+        # update the existing record
+        if quantity_unit != user_inventory_item.data[0]["quantity_unit"]:
+            # make call to llm to do conversion b/c units are different
+            logger.info("making call to llm to do conversion b/c units are different")
+        else:
+            quantity_value_after_addition = user_inventory_item.data[0]["quantity_value"] + quantity_value
+            new_inventory_item = supabase_client.table("user_inventory").update({
+                "quantity_value": quantity_value_after_addition,
+                "quantity_unit": quantity_unit
+            }).eq("user_id", user_id).eq("item_id", item_id).eq("expiry_date", expiry_date).execute()
 
     return new_inventory_item.data[0]
 
