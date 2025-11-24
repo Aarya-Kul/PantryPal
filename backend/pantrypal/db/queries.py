@@ -1,6 +1,8 @@
 from .db_client import supabase_client
 from datetime import date, timedelta
+import logging
 
+logger = logging.getLogger(__name__)
 
 # create new profile
 def create_profile(user_id, name=None, birthday=None):
@@ -91,8 +93,8 @@ def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, 
         raise ValueError("Item not found in user inventory.")
     
     if quantity_unit != inventory_item.data[0]["quantity_unit"]:
-            # make call to llm to do conversion b/c units are different
-            print("making call to llm to do conversion b/c units are different")
+        # make call to llm to do conversion b/c units are different
+        logger.info("making call to llm to do conversion b/c units are different")
 
     quantity_value_after_deduct = inventory_item.data[0]["quantity_value"] - deduct_quantity_value
 
@@ -137,7 +139,7 @@ def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity
         # update the existing record
         if quantity_unit != user_inventory_item.data[0]["quantity_unit"]:
             # make call to llm to do conversion b/c units are different
-            print("making call to llm to do conversion b/c units are different")
+            logger.info("making call to llm to do conversion b/c units are different")
         else:
             quantity_value_after_addition = user_inventory_item.data[0]["quantity_value"] + quantity_value
             new_inventory_item = supabase_client.table("user_inventory").update({
