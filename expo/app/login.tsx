@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
+    Image,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -11,6 +12,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import logo from "../assets/images/logo.png";
 import { useAuth } from "../context/AuthContext";
 
 const LoginScreen: React.FC = () => {
@@ -55,8 +57,13 @@ const LoginScreen: React.FC = () => {
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.inner}>
+        <Image
+            source={logo}
+            style={styles.logo}
+            resizeMode="contain"
+        />
         <Text style={styles.appTitle}>PantryPal</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        {/* <Text style={styles.subtitle}>Sign in to continue</Text> */}
 
         <View style={styles.card}>
           {error && <Text style={styles.error}>{error}</Text>}
@@ -141,7 +148,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 30,
   },
   subtitle: {
     fontSize: 14,
@@ -202,5 +209,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#a5b4fc",
     fontWeight: "500",
+  },
+  logo: {
+    width: 110,
+    height: 110,
+    alignSelf: "center",
+    marginBottom: 16,
   },
 });
