@@ -3,13 +3,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router"; // 👈 add this
 import React, { useCallback, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
@@ -161,9 +161,9 @@ const RecipesScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
+      {/* <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>Recipes</Text>
-      </View>
+      </View> */}
 
       {/* PREFS CARD */}
       <View style={styles.card}>

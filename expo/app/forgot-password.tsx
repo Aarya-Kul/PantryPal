@@ -1,4 +1,4 @@
-// app/login.tsx
+// app/forgot-password.tsx
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -9,41 +9,38 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View,
+    View
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
 
-const LoginScreen: React.FC = () => {
-  const { login } = useAuth();
+const ForgotPasswordScreen: React.FC = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleReset = async () => {
     if (submitting) return;
-
     setError(null);
-
-    const trimmedEmail = email.trim();
-    const emailRegex = /^\S+@\S+\.\S+$/;
-
-    if (!trimmedEmail || !password) {
-      setError("Email and password are required.");
-      return;
-    }
-    if (!emailRegex.test(trimmedEmail)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
+    setSuccessMsg(null);
     setSubmitting(true);
 
     try {
-      await login(trimmedEmail, password);
-      router.replace("/(tabs)");
+      const res = await fetch("http://127.0.0.1:8000/api/forgot_password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to send reset instructions");
+      }
+
+      setSuccessMsg(
+        "If an account exists for this email, a reset link has been sent."
+      );
     } catch (e: any) {
-      setError(e.message ?? "Login failed. Please try again.");
+      setError(e.message ?? "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -55,36 +52,26 @@ const LoginScreen: React.FC = () => {
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
       <View style={styles.inner}>
-        <Text style={styles.appTitle}>PantryPal</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <Text style={styles.title}>Reset your password</Text>
+        <Text style={styles.subtitle}>
+          Enter your email and we’ll send you instructions to reset your
+          password.
+        </Text>
 
         <View style={styles.card}>
-          {error && <Text style={styles.error}>{error}</Text>}
-
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
             autoCapitalize="none"
             keyboardType="email-address"
-            autoComplete="off"
-            textContentType="username"
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
             placeholderTextColor="#777"
           />
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            secureTextEntry
-            autoComplete="off"
-            textContentType="password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="#777"
-          />
+          {error && <Text style={styles.error}>{error}</Text>}
+          {successMsg && <Text style={styles.success}>{successMsg}</Text>}
 
           <Pressable
             style={({ pressed }) => [
@@ -92,39 +79,28 @@ const LoginScreen: React.FC = () => {
               pressed && { opacity: 0.8 },
               submitting && { opacity: 0.7 },
             ]}
-            onPress={handleSubmit}
+            onPress={handleReset}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Log in</Text>
+              <Text style={styles.buttonText}>Send reset link</Text>
             )}
           </Pressable>
 
-          {/* Postman example message (for testers) */}
-          <Text style={styles.hint}>
-            Postman example login:
-            {"\n"}Email: testuser123@gmail.com
-            {"\n"}Password: abc123
-          </Text>
-
-          {/* Links row */}
-          <View style={styles.linkRow}>
-            <Pressable onPress={() => router.push("/signup")}>
-              <Text style={styles.linkText}>Create an account</Text>
-            </Pressable>
-
-            <Pressable onPress={() => router.push("/forgot-password")}>
-              <Text style={styles.linkText}>Forgot password?</Text>
-            </Pressable>
-          </View>
+          <Pressable
+            style={styles.backLink}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>Back to login</Text>
+          </Pressable>
         </View>
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-export default LoginScreen;
+export default ForgotPasswordScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -136,15 +112,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 24,
   },
-  appTitle: {
-    fontSize: 32,
+  title: {
+    fontSize: 24,
     fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#a5b4fc",
     textAlign: "center",
     marginBottom: 24,
@@ -172,11 +148,16 @@ const styles = StyleSheet.create({
   },
   error: {
     color: "#fecaca",
-    marginBottom: 8,
+    marginTop: 10,
+    fontSize: 13,
+  },
+  success: {
+    color: "#bbf7d0",
+    marginTop: 10,
     fontSize: 13,
   },
   button: {
-    marginTop: 16,
+    marginTop: 18,
     backgroundColor: "#4f46e5",
     borderRadius: 999,
     paddingVertical: 12,
@@ -187,20 +168,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  hint: {
-    marginTop: 12,
-    fontSize: 12,
+  backLink: {
+    marginTop: 14,
+    alignItems: "center",
+  },
+  backText: {
     color: "#9ca3af",
-    textAlign: "center",
-  },
-  linkRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  linkText: {
     fontSize: 13,
-    color: "#a5b4fc",
-    fontWeight: "500",
   },
 });

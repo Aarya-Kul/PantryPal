@@ -1,15 +1,14 @@
 // app/recipe.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-// 💡 Can also import Recipe type from (tabs)/recipes if you exported it
 type Ingredient = {
   item_id: number;
   item_name: string;
@@ -81,7 +80,7 @@ const RecipeDetailScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
-      {/* <View style={styles.headerRow}>
+      <View style={styles.headerRow}>
         <Ionicons
           name="chevron-back"
           size={24}
@@ -89,10 +88,10 @@ const RecipeDetailScreen: React.FC = () => {
           onPress={() => router.back()}
         />
         <Text style={styles.screenTitle} numberOfLines={1}>
-          {recipe.name}
+          {"Recipes"}
         </Text>
         <View style={{ width: 24 }} /> 
-      </View> */}
+      </View>
 
       {/* Match + description */}
       <View style={styles.card}>
