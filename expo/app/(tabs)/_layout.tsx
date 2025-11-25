@@ -1,6 +1,7 @@
 // app/(tabs)/_layout.tsx
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import React from "react";
+import { ActivityIndicator, View } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { LogoutButton } from "@/components/logout-button";
@@ -8,18 +9,40 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 
+import { useAuth } from "../../context/AuthContext";
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { token, loading } = useAuth();
 
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#050510",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  // If not logged in, don't render Tabs at all — go to login
+  if (!token) {
+    return <Redirect href="/login" />;
+  }
+
+  // Otherwise, user is authenticated --> show tabs
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        // 👇 show logout in the header on all tabs
         headerRight: () => <LogoutButton />,
       }}
     >
-      {/* existing tabs unchanged */}
       <Tabs.Screen
         name="index"
         options={{
