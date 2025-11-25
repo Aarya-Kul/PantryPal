@@ -1,6 +1,6 @@
 // app/(tabs)/recipes.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router"; // 👈 add this
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,7 +23,7 @@ type Ingredient = {
   quantity_unit: string;
 };
 
-export type Recipe = {   // 👈 export so we can reuse this type in detail screen if we want
+export type Recipe = {   // export so we can reuse this type in detail screen if we want
   name: string;
   description: string;
   cuisines: string[];
@@ -43,7 +43,6 @@ type UserPreferences = {
   macronutrient_preferences: string[];
 };
 
-// helper to display ⭐ rating
 const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
   const safeRating = rating ?? 0;
   const fullStars = Math.floor(safeRating);
@@ -114,12 +113,11 @@ const RecipesScreen: React.FC = () => {
     try {
       setLoadingRecipes(true);
       const res = await fetch(`${API_BASE_URL}/api/get_recipes`, {
-        method: "POST",
+        method: "GET",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({}), // optional
       });
 
       if (!res.ok) {
@@ -136,7 +134,6 @@ const RecipesScreen: React.FC = () => {
     }
   }, [token]);
 
-  // 👇 handler: when user taps a recipe card
   const handleOpenRecipe = (recipe: Recipe) => {
     router.push({
       pathname: "/Recipe",
@@ -244,6 +241,27 @@ const RecipesScreen: React.FC = () => {
 
           <Text style={styles.sectionLabel}>Why this recipe?</Text>
           <Text style={styles.whyText}>{recipe.why_this_recipe}</Text>
+
+          <Text style={styles.sectionLabel}>Cuisines</Text>
+          <View style={styles.chipRow}>
+            {recipe.cuisines?.map((c) => (
+              <Chip key={c} label={c} />
+            ))}
+          </View>
+
+          <Text style={styles.sectionLabel}>Dietary Restrictions</Text>
+          <View style={styles.chipRow}>
+            {recipe.dietary_restrictions?.map((d) => (
+              <Chip key={d} label={d} />
+            ))}
+          </View>
+
+          <Text style={styles.sectionLabel}>Macronutrients</Text>
+          <View style={styles.chipRow}>
+            {recipe.macronutrient_preferences?.map((m) => (
+              <Chip key={m} label={m} />
+            ))}
+          </View>
         </Pressable>
       ))}
     </ScrollView>
