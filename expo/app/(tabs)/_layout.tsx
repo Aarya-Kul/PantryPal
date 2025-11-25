@@ -66,6 +66,18 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ color }) => (
+            <HapticTab>
+              <IconSymbol size={28} name="bell" color={color} />
+            </HapticTab>
+          ),
+        }}
+      />
+
+      <Tabs.Screen
         name="inventory"
         options={{
           title: "Inventory",

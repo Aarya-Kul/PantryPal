@@ -14,9 +14,6 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 
-// Use 0.0.0.0 to match dev backend binding; change if backend runs elsewhere.
-const API_BASE_URL = "http://0.0.0.0:8000";
-
 type InventoryItem = {
   item_id: number;
   quantity_value: number;
@@ -41,29 +38,34 @@ const emptyForm: FormState = {
   expiry_date: "",
 };
 
+// Use localhost for web; change to your LAN IP if testing on device.
+const API_BASE_URL = "http://127.0.0.1:8000";
+
 export default function InventoryScreen() {
   const { token } = useAuth();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  // Use composite key item_id+expiry_date so duplicate names/dates stay distinct.
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [form, setForm] = useState<FormState>(emptyForm);
 
-  const selectedItem = useMemo(
-    () => inventory.find((item) => item.item_id === selectedIds[0]),
-    [inventory, selectedIds]
-  );
+  const selectedItem = useMemo(() => {
+    if (!selectedKeys.length) return undefined;
+    const key = selectedKeys[0];
+    return inventory.find(
+      (item) => `${item.item_id}-${item.expiry_date}` === key
+    );
+  }, [inventory, selectedKeys]);
 
   const friendlyName = (item: InventoryItem) =>
     item.item_name || item.items?.item_name || "Unnamed";
 
-  const toggleSelect = (itemId: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(itemId)
-        ? prev.filter((id) => id !== itemId)
-        : [...prev, itemId]
+  const toggleSelect = (key: string) => {
+    setSelectedKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   };
 
@@ -114,14 +116,14 @@ export default function InventoryScreen() {
       Alert.alert("You are not logged in", "Pleae login before proceeding");
       return;
     }
-    if (!selectedIds.length) {
+    if (!selectedKeys.length) {
       Alert.alert("Select items", "Choose at least one item to remove.");
       return;
     }
     try {
       setSaving(true);
       const items = inventory
-        .filter((it) => selectedIds.includes(it.item_id))
+        .filter((it) => selectedKeys.includes(`${it.item_id}-${it.expiry_date}`))
         .map((it) => ({
           item_id: it.item_id,
           expiry_date: it.expiry_date,
@@ -137,7 +139,7 @@ export default function InventoryScreen() {
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       await fetchInventory();
-      setSelectedIds([]);
+      setSelectedKeys([]);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Could not remove items.");
     } finally {
@@ -198,7 +200,7 @@ export default function InventoryScreen() {
 
       await fetchInventory();
       setModalVisible(false);
-      setSelectedIds([]);
+      setSelectedKeys([]);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Could not save item.");
     } finally {
@@ -228,11 +230,12 @@ export default function InventoryScreen() {
           <ActivityIndicator size="large" color="#2BA84A" style={{ marginTop: 40 }} />
         ) : (
           inventory.map((item) => {
-            const isSelected = selectedIds.includes(item.item_id);
+            const rowKey = `${item.item_id}-${item.expiry_date}`;
+            const isSelected = selectedKeys.includes(rowKey);
             return (
               <Pressable
-                key={item.item_id}
-                onPress={() => toggleSelect(item.item_id)}
+                key={rowKey}
+                onPress={() => toggleSelect(rowKey)}
                 style={[
                   styles.card,
                   isSelected && { borderColor: "#2BA84A", backgroundColor: "#EFF8F0" },
@@ -265,18 +268,18 @@ export default function InventoryScreen() {
           tone="primary"
         />
         <ActionButton
-          label="Edit"
-          icon="create-outline"
-          onPress={openEdit}
-          disabled={!selectedIds.length || saving}
-        />
-        <ActionButton
-          label="Remove"
-          icon="trash-outline"
-          onPress={handleRemove}
-          disabled={!selectedIds.length || saving}
-          tone="danger"
-        />
+        label="Edit"
+        icon="create-outline"
+        onPress={openEdit}
+        disabled={!selectedKeys.length || saving}
+      />
+      <ActionButton
+        label="Remove"
+        icon="trash-outline"
+        onPress={handleRemove}
+        disabled={!selectedKeys.length || saving}
+        tone="danger"
+      />
       </View>
 
       <Modal
@@ -312,12 +315,14 @@ export default function InventoryScreen() {
               value={form.quantity_unit}
               onChangeText={(v) => setForm((prev) => ({ ...prev, quantity_unit: v }))}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Expiry date (YYYY-MM-DD)"
-              value={form.expiry_date}
-              onChangeText={(v) => setForm((prev) => ({ ...prev, expiry_date: v }))}
-            />
+            {mode === "add" && (
+              <TextInput
+                style={styles.input}
+                placeholder="Expiry date (YYYY-MM-DD)"
+                value={form.expiry_date}
+                onChangeText={(v) => setForm((prev) => ({ ...prev, expiry_date: v }))}
+              />
+            )}
 
             <View style={styles.modalActions}>
               <Pressable
