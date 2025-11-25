@@ -115,7 +115,7 @@ TAG VOCABULARIES AND LABELING RULES
      (for example, do NOT output "Mediterranean" if it is not in tag_config["cuisines"]).
   5. You may use tags that the user did NOT explicitly request, as long as:
      - They are present in the corresponding tag_config list, and
-     - They correctly describe the recipe.
+     - They correctly describe the recipe (for example, a dish could be labeled ["Indian", "Chinese"] if both apply).
   6. "dietary_restrictions" should list the restriction tags that the recipe SATISFIES (e.g., "vegetarian" if no meat is used), not the restrictions it violates.
   7. When possible, prefer tags that overlap with the user's preferences, but still label the recipe honestly.
 
