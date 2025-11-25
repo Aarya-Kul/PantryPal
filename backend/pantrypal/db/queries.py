@@ -4,6 +4,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+"""
+TODO
+    1. Give chat the db helper queries and ask it to optimize by creating appropriate indexes
+    2. Add triggers to db for certain events
+        If item becomes expired -> delete from user inventory table
+        If all instances of item are gone -> delete from item table
+        Etc?
+"""
+
+
 # create new profile
 def create_profile(user_id, name=None, birthday=None):
     profile_data = {
@@ -189,6 +199,23 @@ def get_user_inventory(user_id):
     return response.data
 
 
+# get list of preference options
+def get_preferences_tags():
+    tags = {}
+    macronutrients = supabase_client.table("macronutrients").select("*").execute()
+    cuisines = supabase_client.table("cuisines").select("*").execute()
+    dietary_restrictions = supabase_client.table("dietary_restrictions").select("*").execute()
+
+    def format_rows(response, id_key, name_key):
+        return [{"id": row[id_key], "name": row[name_key]} for row in response.data]
+
+    tags["macronutrients"] = format_rows(macronutrients, "macronutrient_id", "macronutrient_name")
+    tags["cuisines"] = format_rows(cuisines, "cuisine_id", "cuisine_name")
+    tags["dietary_restrictions"] = format_rows(dietary_restrictions, "dietary_restriction_id", "dietary_restriction_name")
+
+    return tags
+
+
 # get user preferences
 def get_user_preferences(user_id):
     preferences = {}
@@ -235,7 +262,6 @@ def add_user_preferences(user_id, preferences):
             "user_id": user_id,
             "dietary_restriction_id": drid
         }).execute()
-
 
 
 # get expiring items

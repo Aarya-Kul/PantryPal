@@ -1,5 +1,12 @@
 from flask import Blueprint, request, jsonify
-from pantrypal.db.queries import get_user_inventory, edit_inventory_item, add_inventory_item, deduct_inventory_item, remove_inventory_item, get_expiring_items
+from pantrypal.db.queries import (
+    get_user_inventory, 
+    edit_inventory_item, 
+    add_inventory_item, 
+    deduct_inventory_item, 
+    remove_inventory_item, 
+    get_expiring_items
+)
 from pantrypal.auth.auth_utils import authorize
 
 inventory_bp = Blueprint("inventory", __name__)
