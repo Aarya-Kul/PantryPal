@@ -27,7 +27,6 @@ def build_tag_config():
         # extract names
         tag_config[key] = [item["name"] for item in items]
 
-    logging.info(tag_config)
     return tag_config
 
 
@@ -106,16 +105,19 @@ def build_inventory_summary(inventory_rows):
         expiry = parse_expiry(row["expiry_date"])
         days_to_expiry = (expiry - today).days
 
-        summarized.append(
-            {
-                "item_id": row["item_id"],
-                "item_name": row["items"]["item_name"],
-                "expiry_date": expiry.isoformat(),
-                "quantity_value": row["quantity_value"],
-                "quantity_unit": row["quantity_unit"],
-                "days_to_expiry": days_to_expiry,
-            }
-        )
+        # make sure no expired items are included in summary
+        # TODO: maybe add trigger to DB 
+        if (days_to_expiry >= 0):
+            summarized.append(
+                {
+                    "item_id": row["item_id"],
+                    "item_name": row["items"]["item_name"],
+                    "expiry_date": expiry.isoformat(),
+                    "quantity_value": row["quantity_value"],
+                    "quantity_unit": row["quantity_unit"],
+                    "days_to_expiry": days_to_expiry,
+                }
+            )
 
     logger.info("Inventory summary: %s", summarized)
     return summarized

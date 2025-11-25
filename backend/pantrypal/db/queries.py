@@ -4,6 +4,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+"""
+TODO
+    1. Give chat the db helper queries and ask it to optimize by creating appropriate indexes
+    2. Add triggers to db for certain events
+        If item becomes expired -> delete from user inventory table
+        If all instances of item are gone -> delete from item table
+        Etc?
+"""
+
+
 # create new profile
 def create_profile(user_id, name=None, birthday=None):
     profile_data = {

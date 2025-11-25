@@ -59,13 +59,15 @@ def get_recipes():
     if error:
         return jsonify({"error": error}), 401
 
-    payload = request.get_json(silent=True) or {}
+    # payload = request.get_json(silent=True) or {}
     # max_recipes = payload.get("max_recipes", 5)
 
     # 1) Pull full inventory + preferences
     inventory_rows = get_user_inventory(user_id)
     inventory_summary = build_inventory_summary(inventory_rows)
 
+    # logger.info(inventory_summary)
+    # logger.info(RECIPE_BASE_PROMPT)
     user_prefs = get_user_preferences(user_id)
 
     # (item_id|expiry_date) -> days_to_expiry
@@ -92,6 +94,7 @@ def get_recipes():
 
         Generate 5 complete recipes that follow the instructions.
     """
+    
 
     try:
         model_output = gemini_generator(prompt)
