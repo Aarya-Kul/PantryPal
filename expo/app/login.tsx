@@ -1,26 +1,34 @@
 // app/login.tsx
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import logo from "../assets/images/logo.png";
 import { useAuth } from "../context/AuthContext";
 
 const LoginScreen: React.FC = () => {
-  const { login } = useAuth();
+  const { login, token, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (loading) {
+    return <ActivityIndicator size="large" />;
+  }
+  if (token) {
+    return <Redirect href="/(tabs)" />;
+  }
+
 
   const handleSubmit = async () => {
     if (submitting) return;
