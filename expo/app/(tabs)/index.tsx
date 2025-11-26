@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { HelloWave } from '@/components/hello-wave';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
@@ -74,6 +75,21 @@ export default function HomeScreen() {
           <ThemedText type="defaultSemiBold">app-example</ThemedText>.
         </ThemedText>
       </ThemedView>
+
+      {/* Floating action button to snap a photo/receipt */}
+      <View style={styles.fabContainer}>
+        <Pressable
+          onPress={() => router.push('/snap-photo')}
+          style={({ pressed }) => [
+            styles.fab,
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+          ]}
+        >
+          <ThemedText type="title" style={styles.fabText}>
+            +
+          </ThemedText>
+        </Pressable>
+      </View>
     </ParallaxScrollView>
   );
 }
@@ -94,5 +110,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     position: 'absolute',
+  },
+  fabContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+  },
+  fab: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#2BA84A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2BA84A',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  fabText: {
+    color: '#fff',
+    fontWeight: '900',
+    textAlign: 'center',
   },
 });
