@@ -10,7 +10,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+
+  View
 } from "react-native";
 import logo from "../../assets/images/logo.png";
 import { useAuth } from "../../context/AuthContext";
@@ -42,8 +43,31 @@ const LoginScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
-      await login(trimmedEmail, password);
+      const tokenFromLogin = await login(trimmedEmail, password);
+
+      const prefsRes = await fetch("http://127.0.0.1:8000/api/get_preferences", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${tokenFromLogin}`, // use returned token
+        },
+      });
+
+
+    const prefs = await prefsRes.json();
+
+    // Determine whether user has preferences
+    const hasNoPrefs =
+      prefs.macronutrient_preferences?.length === 0 &&
+      prefs.cuisine_preferences?.length === 0 &&
+      prefs.dietary_restrictions?.length === 0;
+
+    // Route based on preference existence
+    if (hasNoPrefs) {
+      router.replace("/onboarding/preferences");
+    } else {
       router.replace("/(tabs)");
+    }
+      // router.replace("/(tabs)");
     } catch (e: any) {
       setError(e.message ?? "Login failed. Please try again.");
     } finally {

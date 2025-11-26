@@ -9,7 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import { useAuth } from "../../context/AuthContext";
 
@@ -92,9 +92,9 @@ const RecipesScreen: React.FC = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (!res.ok) throw new Error(`failed (${res.status})`);
       const data: UserPreferences = await res.json();
+      console.log("prefs: ", data);
       setPrefs(data);
     } catch (err) {
       Alert.alert("Error", "Could not load user preferences.");
@@ -112,6 +112,7 @@ const RecipesScreen: React.FC = () => {
 
     try {
       setLoadingRecipes(true);
+  
       const res = await fetch(`${API_BASE_URL}/api/get_recipes`, {
         method: "GET",
         headers: {
@@ -120,12 +121,15 @@ const RecipesScreen: React.FC = () => {
         },
       });
 
+     
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to get recipes");
       }
 
       const data = await res.json();
+      console.log("recipe data", data)
       setRecipes(data.recipes);
     } catch (err: any) {
       Alert.alert("Error", err.message);

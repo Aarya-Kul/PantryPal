@@ -4,13 +4,13 @@ import React, {
   createContext,
   useContext,
   useEffect,
-  useState,
+  useState
 } from "react";
 
 type AuthContextValue = {
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<string>;
   logout: () => Promise<void>;
 };
 
@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const restoreToken = async () => {
       try {
         const storedToken = await AsyncStorage.getItem(TOKEN_STORAGE_KEY);
+        console.log("Calling Restore Token")
         if (storedToken) {
           setToken(storedToken);
         }
@@ -53,25 +54,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-
+  
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || "Login failed");
     }
-
+  
     const data = await res.json();
     const newToken = data.access_token as string;
-
-    if (!newToken) {
-      throw new Error("No access token returned from server");
-    }
-
+  
+    if (!newToken) throw new Error("No access token returned from server");
+  
     setToken(newToken);
     await AsyncStorage.setItem(TOKEN_STORAGE_KEY, newToken);
+  
+    return newToken;
   };
+  
 
   const logout = async () => {
     setToken(null);
+    console.log(token)
     try {
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
     } catch (e) {

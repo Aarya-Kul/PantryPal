@@ -239,10 +239,12 @@ def get_user_preferences(user_id):
     return preferences
 
 
+
+
 # add user preferences
 def add_user_preferences(user_id, preferences):
-    macronutrient_ids = preferences.get("macronutrient_preferences", [])
-    cuisine_ids = preferences.get("cuisine_preferences", [])
+    macronutrient_ids = preferences.get("macronutrients", [])
+    cuisine_ids = preferences.get("cuisines", [])
     dietary_restriction_ids = preferences.get("dietary_restrictions", [])
 
     for mid in macronutrient_ids:
