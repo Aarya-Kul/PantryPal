@@ -1,5 +1,7 @@
 from datetime import date, datetime
-from pantrypal.db.queries import get_preferences_tags
+from pantrypal.db.queries import (
+    get_preferences_tags,
+)
 from google.cloud import vision 
 from google import genai
 import logging
@@ -18,6 +20,24 @@ if not gemini_key:
     raise ValueError("Gemini API key not set in .env")
 
 logger = logging.getLogger(__name__)
+
+ALLOWED_UNITS = [
+    "grams",
+    "kilograms",
+    "milligrams",
+    "ounses",
+    "pounds",
+    "milliliters",
+    "liters",
+    "teaspoons",
+    "tablespoons",
+    "fluid_ounces",
+    "cups",
+    "pints",
+    "quarts",
+    "gallons",
+    "units"
+]
 
 def build_tag_config():
     raw_tags = get_preferences_tags()   

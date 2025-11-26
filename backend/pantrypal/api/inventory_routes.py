@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from pantrypal.db.queries import (
     get_user_inventory, 
+    get_inventory_unit_mapping,
     edit_inventory_item, 
     add_inventory_item, 
     deduct_inventory_item, 
@@ -19,6 +20,16 @@ def get_user_inventory_route():
 
     inventory = get_user_inventory(user_id)
     return jsonify({"inventory": inventory}), 200
+
+
+@inventory_bp.route("/get_inventory_unit_mapping", methods=["GET"])
+def get_inventory_unit_mapping_route():
+    user_id, error = authorize(request)
+    if error:
+        return jsonify({"error": error}), 401
+
+    mapping = get_inventory_unit_mapping(user_id)
+    return jsonify({"mapping": mapping})
 
 
 @inventory_bp.route("/add_inventory_item", methods=["POST"])

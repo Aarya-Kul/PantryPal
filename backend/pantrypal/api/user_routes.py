@@ -1,5 +1,12 @@
 from flask import Blueprint, request, jsonify
-from pantrypal.db.queries import create_user, login_user, get_user_preferences, add_user_preferences, send_password_reset
+from pantrypal.db.queries import (
+    create_user, 
+    login_user, 
+    get_preferences_tags, 
+    get_user_preferences,
+    add_user_preferences, 
+    send_password_reset
+)
 from pantrypal.auth.auth_utils import authorize
 
 user_bp = Blueprint("users", __name__)
@@ -70,6 +77,18 @@ def forgot_password_route():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@user_bp.route("/preference_options", methods=["GET"])
+def get_preferences_options_route():
+    _, error = authorize(request)
+    if error:
+        return jsonify({"error": error}), 401
+
+    preferences = get_preferences_tags()
+
+    return jsonify(preferences), 200
+
 
 @user_bp.route("/get_preferences", methods=["GET"])
 def get_preferences_route():

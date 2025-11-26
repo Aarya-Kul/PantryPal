@@ -2,18 +2,19 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+
+  View
 } from "react-native";
-import logo from "../assets/images/logo.png";
-import { useAuth } from "../context/AuthContext";
+import logo from "../../assets/images/logo.png";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginScreen: React.FC = () => {
   const { login } = useAuth();
@@ -42,14 +43,19 @@ const LoginScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
+      // Just log in; this sets the token in context + AsyncStorage
       await login(trimmedEmail, password);
-      router.replace("/(tabs)");
+
+      // DO NOT navigate here.
+      // ProtectedLayout will detect token, check prefs,
+      // and redirect to either /onboarding/preferences or /(tabs).
     } catch (e: any) {
       setError(e.message ?? "Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <KeyboardAvoidingView
