@@ -26,8 +26,10 @@ Follow this decision tree **in order**:
 - Set "quantity_unit": "unit".
 
 ### C. If item is typically sold “by weight” (grapes, potatoes, broccoli, meat, bulk items, etc.)
-- Keep the weight exactly.
-- Set "quantity_unit": "kg".
+- If the item exists in the inventory unit mappings, use the unit from the inventory unit mapping NOT the weighing unit.
+  Convert the quantity from the weighing unit to the inventory mapping unit.
+- If the item does not exist in the inventory unit mappings, use the weighing unit and quantity, provided it exists in the allowed list of units.
+  If the weighing unit is not in the list of allowed units, select a unit from the allowed list and convert the quantity appropriately.
 
 ### D. If item is typically sold as a PACKAGE (pasta bag, yogurt tub, oats container, canned goods)
 Infer quantity and units from:
@@ -44,7 +46,9 @@ If inference is uncertain:
 - Use "quantity_unit": "package" and "quantity_value": 1.
 
 ## 3. EXPIRY DATE INFERENCE
-- If no expiry date exists, add the average shelf life for that food to the current date to create `expiry_date`.
+- Use the date on the receipt as the reference date, if it exists.
+- If no date is provided on the receipt, use the current date as the reference date.
+- If no expiry date exists, add the average shelf life for that food to the reference date to create `expiry_date`.
 
 ======================
 JSON SCHEMA
