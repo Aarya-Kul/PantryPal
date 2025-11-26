@@ -48,12 +48,21 @@ export default function SnapReviewScreen() {
       try {
         setExtracting(true);
 
-        const fileName = photo.split("/").pop() || "receipt.jpg";
+        const rawName = photo.split("/").pop() || "receipt";
+        const fileName = rawName.match(/\.(jpg|jpeg|png)$/i)
+          ? rawName
+          : `${rawName}.jpg`;
         const form = new FormData();
 
         if (Platform.OS === "web") {
-          const blob = await (await fetch(photo)).blob();
-          form.append("data", blob, fileName);
+          const response = await fetch(photo);
+          const blob = await response.blob();
+          const contentType =
+            blob.type && blob.type !== "application/octet-stream"
+              ? blob.type
+              : "image/jpeg";
+          const typedBlob = blob.type === contentType ? blob : new Blob([blob], { type: contentType });
+          form.append("data", typedBlob, fileName);
         } else {
           form.append("data", {
             uri: photo,
