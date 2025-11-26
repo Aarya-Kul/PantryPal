@@ -199,6 +199,24 @@ def get_user_inventory(user_id):
     return response.data
 
 
+def get_inventory_unit_mapping(user_id):
+    inventory_unit_mapping = []
+    user_inventory = get_user_inventory(user_id)
+    seen = set()
+
+    for item in user_inventory:
+        item_id = item["item_id"]
+
+        if item_id not in seen:
+            seen.add(item_id)
+            inventory_unit_mapping.append({
+                "item_name": item["items"]["item_name"],
+                "unit": item["quantity_unit"]
+            })
+
+    return inventory_unit_mapping
+    
+
 # get list of preference options
 def get_preferences_tags():
     tags = {}
@@ -237,8 +255,6 @@ def get_user_preferences(user_id):
     preferences["dietary_restrictions"] = [data['dietary_restrictions']['dietary_restriction_name'] for data in dietary_restrictions_data.data]
 
     return preferences
-
-
 
 
 # add user preferences

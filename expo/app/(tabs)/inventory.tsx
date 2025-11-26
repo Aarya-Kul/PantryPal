@@ -9,10 +9,31 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
+
 
 import { useAuth } from "@/context/AuthContext";
+
+const ALLOWED_UNITS = [
+  "grams",
+  "kilograms",
+  "milligrams",
+  "ounces",
+  "pounds",
+  "milliliters",
+  "liters",
+  "teaspoons",
+  "tablespoons",
+  "fluid_ounces",
+  "cups",
+  "pints",
+  "quarts",
+  "gallons",
+  "units",
+];
+
 
 type InventoryItem = {
   item_id: number;
@@ -51,6 +72,8 @@ export default function InventoryScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [unitMapping, setUnitMapping] = useState<{ item_name: string; unit: string }[]>([]);
+
 
   const selectedItem = useMemo(() => {
     if (!selectedKeys.length) return undefined;
@@ -67,6 +90,24 @@ export default function InventoryScreen() {
     setSelectedKeys((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
+  };
+
+  const fetchUnitMapping = useCallback(async () => {
+    if (!token) return;
+    const res = await fetch(`${API_BASE_URL}/api/get_inventory_unit_mapping`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setUnitMapping(data.mapping || []);
+    }
+  }, [token]);
+  
+  const getUnitsForItem = (name: string) => {
+    const match = unitMapping.find(
+      (entry) => entry.item_name.toLowerCase() === name.toLowerCase()
+    );
+    return match ? [match.unit] : ALLOWED_UNITS;
   };
 
   const fetchInventory = useCallback(async () => {
@@ -88,7 +129,8 @@ export default function InventoryScreen() {
 
   useEffect(() => {
     fetchInventory();
-  }, [fetchInventory]);
+    fetchUnitMapping();
+  }, [fetchInventory, fetchUnitMapping]);
 
   const openAdd = () => {
     setMode("add");
@@ -199,6 +241,7 @@ export default function InventoryScreen() {
       }
 
       await fetchInventory();
+      await fetchUnitMapping();
       setModalVisible(false);
       setSelectedKeys([]);
     } catch (err: any) {
@@ -309,11 +352,17 @@ export default function InventoryScreen() {
               value={form.quantity_value}
               onChangeText={(v) => setForm((prev) => ({ ...prev, quantity_value: v }))}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Unit (e.g. pcs, lbs)"
+            <RNPickerSelect
+              onValueChange={(value) =>
+                setForm((prev) => ({ ...prev, quantity_unit: value }))
+              }
+              placeholder={{ label: "Select unit", value: null }}
               value={form.quantity_unit}
-              onChangeText={(v) => setForm((prev) => ({ ...prev, quantity_unit: v }))}
+              items={getUnitsForItem(form.item_name).map((u) => ({ label: u, value: u }))}
+              style={{
+                inputIOS: styles.input,
+                inputAndroid: styles.input,
+              }}
             />
             {mode === "add" && (
               <TextInput
