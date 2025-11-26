@@ -43,37 +43,19 @@ const LoginScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const tokenFromLogin = await login(trimmedEmail, password);
+      // Just log in; this sets the token in context + AsyncStorage
+      await login(trimmedEmail, password);
 
-      const prefsRes = await fetch("http://127.0.0.1:8000/api/get_preferences", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${tokenFromLogin}`, // use returned token
-        },
-      });
-
-
-    const prefs = await prefsRes.json();
-
-    // Determine whether user has preferences
-    const hasNoPrefs =
-      prefs.macronutrient_preferences?.length === 0 &&
-      prefs.cuisine_preferences?.length === 0 &&
-      prefs.dietary_restrictions?.length === 0;
-
-    // Route based on preference existence
-    if (hasNoPrefs) {
-      router.replace("/onboarding/preferences");
-    } else {
-      router.replace("/(tabs)");
-    }
-      // router.replace("/(tabs)");
+      // DO NOT navigate here.
+      // ProtectedLayout will detect token, check prefs,
+      // and redirect to either /onboarding/preferences or /(tabs).
     } catch (e: any) {
       setError(e.message ?? "Login failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <KeyboardAvoidingView

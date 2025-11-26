@@ -43,6 +43,31 @@ export default function TabLayout() {
         headerRight: () => <LogoutButton />,
       }}
     >
+{/* 
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ color }) => (
+            <HapticTab>
+              <IconSymbol size={28} name="bell" color={color} />
+            </HapticTab>
+          ),
+        }}
+      /> */}
+
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: "Inventory",
+          tabBarIcon: ({ color }) => (
+            <HapticTab>
+              <IconSymbol size={28} name="cart.fill" color={color} />
+            </HapticTab>
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="index"
         options={{
@@ -51,16 +76,6 @@ export default function TabLayout() {
             <HapticTab>
               <IconSymbol size={28} name="house.fill" color={color} />
             </HapticTab>
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="sparkles" color={color} />
           ),
         }}
       />
