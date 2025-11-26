@@ -1,5 +1,8 @@
 from datetime import date, datetime
-from pantrypal.db.queries import get_preferences_tags
+from pantrypal.db.queries import (
+    get_preferences_tags,
+    get_user_inventory
+)
 from google.cloud import vision 
 from google import genai
 import logging
@@ -19,6 +22,25 @@ if not gemini_key:
 
 logger = logging.getLogger(__name__)
 
+ALLOWED_UNITS = [
+    "grams",
+    "kilograms",
+    "milligrams",
+    "ounses",
+    "pounds",
+    "milliliters",
+    "liters",
+    "teaspoons",
+    "tablespoons",
+    "fluid_ounces",
+    "cups",
+    "pints",
+    "quarts",
+    "gallons",
+    "units"
+]
+
+
 def build_tag_config():
     raw_tags = get_preferences_tags()   
     tag_config = {}
@@ -28,6 +50,24 @@ def build_tag_config():
         tag_config[key] = [item["name"] for item in items]
 
     return tag_config
+
+
+def get_inventory_unit_mapping(user_id):
+    inventory_unit_mapping = []
+    user_inventory = get_user_inventory(user_id)
+    seen = set()
+
+    for item in user_inventory:
+        item_id = item["item_id"]
+
+        if item_id not in seen:
+            seen.add(item_id)
+            inventory_unit_mapping.append({
+                "item_name": item["items"]["item_name"],
+                "unit": item["quantity_unit"]
+            })
+
+    return inventory_unit_mapping
 
 
 def parse_expiry(expiry_value):

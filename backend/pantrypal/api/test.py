@@ -4,6 +4,7 @@ from datetime import datetime
 from google import genai
 from dotenv import load_dotenv
 
+
 # Load environment variables
 load_dotenv()
 gemini_key = os.getenv("GEMINI_API_KEY")
@@ -44,7 +45,7 @@ PASTA PENNE
 $2.49
 OATS ROLLED
 $3.99
-MILK FULL CREAM
+MILK
 $3.89
 YOGURT GREEK
 $23.00
@@ -52,18 +53,31 @@ BEANS BLACK
 $1.29
 CORN CANNED
 $1.49
+2lb CHICKEN @ 5.99/lb
 SUBTOTAL $39.20
 CASH $50.00
 CHANGE $25.80
 """
 
-# Current date string
-date_str = f"Today's date is {datetime.now().date()}. Message = "
+ALLOWED_UNITS = [
+    "grams",
+    "kilograms",
+    "milligrams",
+    "ounses",
+    "pounds",
+    "milliliters",
+    "liters",
+    "teaspoons",
+    "tablespoons",
+    "fluid_ounces",
+    "cups",
+    "pints",
+    "quarts",
+    "gallons",
+    "units"
+]
 
-# Build prompt
-prompt = (
-    date_str + text +
-"""
+RECEIPT_BASE_PROMPT = """
 Convert the following receipt text into JSON following the rules below. 
 Only output valid JSON. Do not include explanations.
 
@@ -75,37 +89,40 @@ Only output valid JSON. Do not include explanations.
 
 ## 2. HOW TO INFER QUANTITY (EXTREMELY IMPORTANT)
 Extract or infer:
-  "quantity_value": number,
-  "quantity_unit": str,
+"quantity_value": number,
+"quantity_unit": str,
 
 Follow this decision tree **in order**:
 
-### **A. If weight is given (e.g., “0.778kg NET @ $5.99/kg”)**
+### A. If weight is given (e.g., “0.778kg NET @ $5.99/kg”)
 - Use the weight as the base signal.
 - Decide whether to convert weight → units using the rules below.
 
-### **B. If item is typically sold “by unit” (bananas, apples, onions, cucumbers, zucchini, etc.)**
+### B. If item is typically sold “by unit” (bananas, apples, onions, cucumbers, zucchini, etc.)
 - Use unit count if given or if weight then follow:
 - Convert weight → estimated count.
-- Use typical average weights of the item
-- Set `"quantity_unit": "unit"`.
+- Use typical average weights of the item.
+- Set "quantity_unit": "unit".
 
-### **C. If item is typically sold “by weight” (grapes, potatoes, broccoli, meat, bulk items, etc.)**
-- Keep the weight exactly.
-- Set `"quantity_unit": "kg"`.
+### C. If item is typically sold “by weight” (grapes, potatoes, broccoli, meat, bulk items, etc.)
+- If the item exists in the inventory unit mappings, use the unit from the inventory unit mapping NOT the weighing unit.
+  Convert the quantity from the weighing unit to the inventory mapping unit.
+- If the item does not exist in the inventory unit mappings, use the weighing unit and quantity, provided it exists in the allowed list of units.
+  If the weighing unit is not in the list of allowed units, select a unit from the allowed list and convert the quantity appropriately.
 
-### **D. If item is typically sold as a PACKAGE (pasta bag, yogurt tub, oats container, canned goods)**
+### D. If item is typically sold as a PACKAGE (pasta bag, yogurt tub, oats container, canned goods)
 Infer quantity and units from:
 - typical package size,
 - total price,
 - or naming conventions.
 
-Examples (not fixed as the quantity can vary based on rules above):
-- “pasta penne” → `"quantity_unit": "g", "quantity_value": 500`
-- “yogurt greek” → `"quantity_unit": "kg", "quantity_value": 1` or `"quantity_unit": "g", "quantity_value": 500`
+Examples:
+- “pasta penne” → "quantity_unit": "g", "quantity_value": 500
+- “yogurt greek” → "quantity_unit": "kg", "quantity_value": 1  
+  OR "quantity_unit": "g", "quantity_value": 500
 
 If inference is uncertain:
-- Use `"quantity_unit": "package"` and `"quantity_value": 1"`.
+- Use "quantity_unit": "package" and "quantity_value": 1.
 
 ## 3. EXPIRY DATE INFERENCE
 - If no expiry date exists, add the average shelf life for that food to the current date to create `expiry_date`.
@@ -132,7 +149,84 @@ Sort items into:
 
 Output ONLY valid JSON.
 """
-)
+
+
+x = {
+  "data": [
+    {
+      "item_id": 9,
+      "item_name": "milk",
+      "unit": "gallons"
+    },
+    {
+      "item_id": 7,
+      "item_name": "watermelon",
+      "unit": "ounces"
+    },
+    {
+      "item_id": 12,
+      "item_name": "lamb",
+      "unit": "pounds"
+    },
+    {
+      "item_id": 2,
+      "item_name": "eggs",
+      "unit": "units"
+    },
+    {
+      "item_id": 4,
+      "item_name": "chicken",
+      "unit": "kilograms"
+    },
+    {
+      "item_id": 3,
+      "item_name": "cheese",
+      "unit": "grams"
+    },
+    {
+      "item_id": 20,
+      "item_name": "carrot cake",
+      "unit": "units"
+    },
+    {
+      "item_id": 23,
+      "item_name": "cheesecake",
+      "unit": "units"
+    },
+    {
+      "item_id": 21,
+      "item_name": "brownies",
+      "unit": "grams"
+    },
+    {
+      "item_id": 22,
+      "item_name": "sugar cookies",
+      "unit": "units"
+    }
+  ]
+}
+
+
+prompt = f"""
+        Today's date is {datetime.now().date()}
+        
+        Scanned Receipt:
+        {text}
+        
+        Inventory Unit Mapping:
+        {json.dumps(x['data'])}
+
+        List of allowed units:
+        {json.dumps(ALLOWED_UNITS)}
+
+        Rules for including units:
+          - If an item on the scanned receipt corresponds to an item in the inventory unit mapping, use the unit associated with the item in the mapping.
+          - Provide the appropriate quantity based on the chosen unit.
+          - If the item on the receipt does not correspond to an item in the inventory unit mapping, use the appropriate unit from the list of allowed units.
+          - All selected units MUST be in plural form AND in the list of allowed units.
+
+        {RECEIPT_BASE_PROMPT}
+    """
 
 # Generate structured response
 response = client.models.generate_content(
