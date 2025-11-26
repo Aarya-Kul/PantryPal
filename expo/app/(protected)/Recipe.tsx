@@ -1,15 +1,13 @@
 // app/recipe.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
-import { useAuth } from "../context/AuthContext";
 
 type Ingredient = {
   item_id: number;
@@ -57,21 +55,6 @@ const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
 };
 
 const RecipeDetailScreen: React.FC = () => {
-  const { token, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  // Redirect if not logged in
-  if (!token) {
-    return <Redirect href="/login" />;
-  }
-
   const params = useLocalSearchParams();
   const raw = params.recipe as string | undefined;
 

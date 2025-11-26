@@ -11,7 +11,7 @@ import {
     TextInput,
     View,
 } from "react-native";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 const UpdatePasswordScreen: React.FC = () => {
   const [password, setPassword] = useState("");

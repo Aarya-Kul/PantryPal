@@ -1,5 +1,5 @@
 // app/login.tsx
-import { Redirect, router } from "expo-router";
+import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -12,23 +12,15 @@ import {
   TextInput,
   View,
 } from "react-native";
-import logo from "../assets/images/logo.png";
-import { useAuth } from "../context/AuthContext";
+import logo from "../../assets/images/logo.png";
+import { useAuth } from "../../context/AuthContext";
 
 const LoginScreen: React.FC = () => {
-  const { login, token, loading } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (loading) {
-    return <ActivityIndicator size="large" />;
-  }
-  if (token) {
-    return <Redirect href="/(tabs)" />;
-  }
-
 
   const handleSubmit = async () => {
     if (submitting) return;
