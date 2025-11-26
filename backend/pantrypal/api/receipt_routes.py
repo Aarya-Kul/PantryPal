@@ -6,9 +6,9 @@ from pantrypal.api.helpers import (
     allowed_file,
     scan_receipts,
     gemini_generator,
-    get_inventory_unit_mapping,
     ALLOWED_UNITS
 )
+from pantrypal.db.queries import get_inventory_unit_mapping
 import logging
 import json
 
