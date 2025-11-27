@@ -5,7 +5,8 @@ from pantrypal.db.queries import (
     get_preferences_tags, 
     get_user_preferences,
     add_user_preferences, 
-    send_password_reset
+    send_password_reset,
+    get_nutrient_statistics
 )
 from pantrypal.auth.auth_utils import authorize
 
@@ -31,7 +32,6 @@ def create_user_route():
 
     except Exception as e:
         return jsonify({"error": "Internal server error (Email may be already taken)"}), 500
-
 
 @user_bp.route("/login", methods=["POST"])
 def login_user_route():
@@ -78,36 +78,61 @@ def forgot_password_route():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @user_bp.route("/preference_options", methods=["GET"])
 def get_preferences_options_route():
-    _, error = authorize(request)
-    if error:
-        return jsonify({"error": error}), 401
+    try:
+        _, error = authorize(request)
+        if error:
+            return jsonify({"error": error}), 401
 
-    preferences = get_preferences_tags()
+        preferences = get_preferences_tags()
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
     return jsonify(preferences), 200
-
 
 @user_bp.route("/get_preferences", methods=["GET"])
 def get_preferences_route():
-    user_id, error = authorize(request)
-    if error:
-        return jsonify({"error": error}), 401
+    try:
+        user_id, error = authorize(request)
+        if error:
+            return jsonify({"error": error}), 401
 
-    preferences = get_user_preferences(user_id)
+        preferences = get_user_preferences(user_id)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     return jsonify(preferences), 200
 
-
 @user_bp.route("/add_preferences", methods=["POST"])
 def add_preferences_route():
-    user_id, error = authorize(request)
-    if error:
-        return jsonify({"error": error}), 401
+    try:
+        user_id, error = authorize(request)
+        if error:
+            return jsonify({"error": error}), 401
 
-    preferences = request.json
-    add_user_preferences(user_id, preferences)
+        preferences = request.json
+        add_user_preferences(user_id, preferences)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
     return jsonify({"status": "success"}), 200
+
+@user_bp.route("/get_nutrient_statistics", methods=["GET"])
+def get_nutrient_statistics_route():
+    try:
+        user_id, error = authorize(request)
+        if error:
+            return jsonify({"error": error}), 401
+
+        reference_date = request.args.get("date")
+        nutrient_statistics = get_nutrient_statistics(user_id, reference_date)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify(nutrient_statistics), 200
