@@ -282,10 +282,48 @@ def add_user_preferences(user_id, preferences):
         }).execute()
 
 
+# add nutrition info
+def add_nutrition_info(user_id, recipe_nutrition):
+    today = date.today().isoformat()
+
+    existing = supabase_client.table("user_nutrition") \
+        .select("*") \
+        .eq("user_id", user_id) \
+        .eq("date", today) \
+        .execute()
+
+    if existing.data:
+        record = existing.data[0]
+
+        updated_data = {}
+        for key, value in recipe_nutrition.items():
+            updated_data[key] = record.get(key, 0) + value
+
+        response = supabase_client.table("user_nutrition") \
+            .update(updated_data) \
+            .eq("user_id", user_id) \
+            .eq("date", today) \
+            .execute()
+
+        return response.data[0]
+
+    insert_data = {
+        "user_id": user_id,
+        "date": today,
+        **recipe_nutrition
+    }
+
+    response = supabase_client.table("user_nutrition") \
+        .insert(insert_data) \
+        .execute()
+
+    return response.data[0]
+
+
 # get expiring items
 def get_expiring_items(user_id):
     notifications = {}
-    today = date.today()
+    today = date.today().isoformat()
 
     week_notification_data = supabase_client.table("user_inventory").select(
         "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"

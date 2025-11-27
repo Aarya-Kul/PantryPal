@@ -139,6 +139,11 @@ OUTPUT BEHAVIOR
 - Do not include any commentary, markdown, or explanation outside the JSON.
 - You must return JSON only.
 
+NUTRITION FIELD REQUIREMENT
+- For each recipe, include a field called "nutrition".
+- This field contains 5 subfields: protein, dairy, veggies, fruits, carbs, and fats.
+- Estimate the amount (in grams) for each of these nutrition fields in the recipe.
+
 EXPLANATION FIELD REQUIREMENT
 - For each recipe, include a field called "why_this_recipe".
 - This explanation must:
@@ -168,6 +173,14 @@ Your output MUST follow this exact JSON structure:
         }
       ],
       "why_this_recipe": "string"
+      "nutrition": {
+        "protein": <int>,
+        "fats": <int>,
+        "dairy": <int>,
+        "fruits": <int>,
+        "veggies": <int>,
+        "carbs": <int>
+      }
     }
   ]
 }

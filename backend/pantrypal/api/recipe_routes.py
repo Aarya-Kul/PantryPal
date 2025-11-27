@@ -5,6 +5,7 @@ import logging
 from pantrypal.db.queries import (
     get_user_inventory,
     get_user_preferences,
+    add_nutrition_info
 )
 from pantrypal.api.helpers import (
     build_inventory_summary,
@@ -18,6 +19,22 @@ from pantrypal.api.prompts import RECIPE_BASE_PROMPT
 
 recipes_bp = Blueprint("recipes", __name__)
 logger = logging.getLogger(__name__)
+
+@recipes_bp.route("/add_recipe_nutrition", methods=["POST"])
+def add_recipe_nutrition_route():
+    user_id, error = authorize(request)
+    if error:
+        return jsonify({"error": error}), 401
+    
+    data = request.json
+    recipe_nutrition = data.get("nutrition")
+
+    if not recipe_nutrition:
+        return jsonify({"error": "Missing nutrition data"}), 400
+
+    updated = add_nutrition_info(user_id, recipe_nutrition)
+    return jsonify({"nutrition": updated}), 200
+
 
 
 @recipes_bp.route("/get_recipes", methods=["GET"])
