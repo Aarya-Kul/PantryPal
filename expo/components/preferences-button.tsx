@@ -1,4 +1,5 @@
-// components/logout-button.tsx
+// components/header-buttons.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import { Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
@@ -16,33 +17,25 @@ export const headerButtonBase: StyleProp<ViewStyle> = {
   marginRight: 12,
 };
 
-// Tooltip subcomponent
 const Tooltip: React.FC<{ text: string }> = ({ text }) => (
   <View style={styles.tooltip}>
     <Text style={styles.tooltipText}>{text}</Text>
   </View>
 );
 
-export const LogoutButton: React.FC = () => {
-  const { logout } = useAuth();
+export const PreferencesButton: React.FC = () => {
   const [hover, setHover] = useState(false);
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/login");
-  };
 
   return (
     <View style={{ position: "relative" }}>
-      {hover && Platform.OS === "web" && <Tooltip text="Log out" />}
-
+      {hover && Platform.OS === "web" && <Tooltip text="Preferences" />}
       <Pressable
-        onPress={handleLogout}
+        onPress={() => router.push("/onboarding/preferences")}
         onHoverIn={() => setHover(true)}
         onHoverOut={() => setHover(false)}
         style={[headerButtonBase, Platform.OS === "web" ? { cursor: "pointer" } : {}]}
       >
-        <Text style={styles.logoutText}>⎋</Text>
+        <Ionicons name="settings-outline" size={16} color="#e5e7eb" />
       </Pressable>
     </View>
   );
@@ -51,7 +44,7 @@ export const LogoutButton: React.FC = () => {
 const styles = StyleSheet.create({
   tooltip: {
     position: "absolute",
-    top: 38, // button height + small margin
+    top: 38, // button height (34) + small margin
     left: "50%",
     transform: [{ translateX: -17 }], // half of button width
     backgroundColor: "#111",

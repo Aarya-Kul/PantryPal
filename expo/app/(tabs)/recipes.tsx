@@ -23,7 +23,16 @@ type Ingredient = {
   quantity_unit: string;
 };
 
-export type Recipe = {   // export so we can reuse this type in detail screen if we want
+type Nutrition = {
+  protein: number;
+  fats: number;
+  dairy: number;
+  fruits: number;
+  veggies: number;
+  carbs: number;
+};
+
+export type Recipe = {
   name: string;
   description: string;
   cuisines: string[];
@@ -35,6 +44,7 @@ export type Recipe = {   // export so we can reuse this type in detail screen if
   expiry_priority_stars?: number;
   preference_match_percent?: number;
   min_days_to_expiry?: number | null;
+  nutrition: Nutrition;
 };
 
 type UserPreferences = {

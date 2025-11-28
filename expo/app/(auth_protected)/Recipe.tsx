@@ -3,11 +3,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "../../context/AuthContext";
 
 type Ingredient = {
   item_id: number;
@@ -15,6 +18,15 @@ type Ingredient = {
   expiry_date: string;
   quantity_value: number;
   quantity_unit: string;
+};
+
+type Nutrition = {
+  protein: number;
+  fats: number;
+  dairy: number;
+  fruits: number;
+  veggies: number;
+  carbs: number;
 };
 
 type Recipe = {
@@ -29,7 +41,10 @@ type Recipe = {
   expiry_priority_stars?: number;
   preference_match_percent?: number;
   min_days_to_expiry?: number | null;
+  nutrition: Nutrition;
 };
+
+const API_BASE_URL = "http://127.0.0.1:8000"; // change if needed
 
 const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
   const safeRating = rating ?? 0;
@@ -56,6 +71,8 @@ const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
 
 const RecipeDetailScreen: React.FC = () => {
   const params = useLocalSearchParams();
+  const [loading, setLoading] = React.useState(false);
+  const { token } = useAuth(); // <<< we use auth context
   const raw = params.recipe as string | undefined;
 
   if (!raw) {
@@ -77,117 +94,203 @@ const RecipeDetailScreen: React.FC = () => {
     );
   }
 
+  const handleCookRecipe = async () => {
+    if (!token) {
+      alert("You must be logged in to cook a recipe.");
+      return;
+    }
+
+    setLoading(true);
+  
+    console.log("Cooking recipe:", recipe.name);
+    console.log("Ingredients to deduct:", recipe.ingredients);
+  
+    try {
+      const nutrition_response = await fetch(`${API_BASE_URL}/api/add_recipe_nutrition`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ nutrition: recipe.nutrition }),
+      });
+  
+      if (!nutrition_response.ok) {
+        const err = await nutrition_response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to add nutrition info");
+      }
+  
+      const nutrition_data = await nutrition_response.json();
+      console.log("nutrition data", nutrition_data)
+
+      const response = await fetch(`${API_BASE_URL}/api/deduct_inventory_item`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          items: recipe.ingredients.map((ing) => ({
+            item_id: ing.item_id,
+            expiry_date: ing.expiry_date,
+            quantity_value: ing.quantity_value,
+            quantity_unit: ing.quantity_unit,
+          })),
+        }),
+      });
+  
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to deduct inventory items");
+      }
+  
+      const data = await response.json();
+      console.log("Deducted items:", data);
+      alert(`Successfully cooked ${recipe.name}! Inventory updated.`);
+      router.push("/");
+    } catch (err: any) {
+      console.error("Error deducting ingredients:", err.message);
+      alert("Failed to cook recipe. Check inventory quantities.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Ionicons
-          name="chevron-back"
-          size={24}
-          color="#fff"
-          onPress={() => router.back()}
-        />
-        <Text style={styles.screenTitle} numberOfLines={1}>
-          {"Recipes"}
-        </Text>
-        <View style={{ width: 24 }} /> 
-      </View>
-
-      {/* Match + description */}
-      <View style={styles.card}>
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.cardTitle}>{recipe.name}</Text>
-          <Text style={styles.matchText}>
-            {recipe.preference_match_percent ?? 0}% match
+    <SafeAreaView style={styles.outerContainer}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: 120 }]} // space for floating button
+      >
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <Ionicons
+            name="chevron-back"
+            size={24}
+            color="#fff"
+            onPress={() => router.back()}
+          />
+          <Text style={styles.screenTitle} numberOfLines={1}>
+            Recipes
           </Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        <Text style={styles.description}>{recipe.description}</Text>
-
-        <View style={styles.metaRow}>
-          <View>
-            <Text style={styles.metaLabel}>Expiry Priority</Text>
-            <StarRating rating={recipe.expiry_priority_stars} />
+        {/* Match + description */}
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>{recipe.name}</Text>
+            <Text style={styles.matchText}>
+              {recipe.preference_match_percent ?? 0}% match
+            </Text>
           </View>
-          {recipe.min_days_to_expiry != null && (
+
+          <Text style={styles.description}>{recipe.description}</Text>
+
+          <View style={styles.metaRow}>
             <View>
-              <Text style={styles.metaLabel}>Soonest Expiry</Text>
-              <Text style={styles.metaValue}>
-                {recipe.min_days_to_expiry} days
-              </Text>
+              <Text style={styles.metaLabel}>Expiry Priority</Text>
+              <StarRating rating={recipe.expiry_priority_stars} />
             </View>
-          )}
+            {recipe.min_days_to_expiry != null && (
+              <View>
+                <Text style={styles.metaLabel}>Soonest Expiry</Text>
+                <Text style={styles.metaValue}>
+                  {recipe.min_days_to_expiry} days
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
 
-      {/* Tags */}
-      <View style={styles.card}>
-        <Text style={styles.sectionLabel}>Cuisines</Text>
-        <View style={styles.chipRow}>
-          {recipe.cuisines?.map((c) => (
-            <View key={c} style={styles.chip}>
-              <Text style={styles.chipText}>{c}</Text>
-            </View>
+        {/* Tags */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Cuisines</Text>
+          <View style={styles.chipRow}>
+            {recipe.cuisines?.map((c) => (
+              <View key={c} style={styles.chip}>
+                <Text style={styles.chipText}>{c}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.sectionLabel}>Dietary Restrictions</Text>
+          <View style={styles.chipRow}>
+            {recipe.dietary_restrictions?.map((d) => (
+              <View key={d} style={styles.chip}>
+                <Text style={styles.chipText}>{d}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.sectionLabel}>Macronutrients</Text>
+          <View style={styles.chipRow}>
+            {recipe.macronutrient_preferences?.map((m) => (
+              <View key={m} style={styles.chip}>
+                <Text style={styles.chipText}>{m}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Ingredients */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Ingredients</Text>
+          {recipe.ingredients.map((ing) => (
+            <Text
+              key={`${ing.item_id}-${ing.expiry_date}`}
+              style={styles.listItem}
+            >
+              • {ing.quantity_value} {ing.quantity_unit} {ing.item_name} (exp:{" "}
+              {ing.expiry_date})
+            </Text>
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Dietary Restrictions</Text>
-        <View style={styles.chipRow}>
-          {recipe.dietary_restrictions?.map((d) => (
-            <View key={d} style={styles.chip}>
-              <Text style={styles.chipText}>{d}</Text>
-            </View>
+        {/* Steps */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Steps</Text>
+          {recipe.steps.map((step, i) => (
+            <Text key={i} style={styles.listItem}>
+              {i + 1}. {step}
+            </Text>
           ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Macronutrients</Text>
-        <View style={styles.chipRow}>
-          {recipe.macronutrient_preferences?.map((m) => (
-            <View key={m} style={styles.chip}>
-              <Text style={styles.chipText}>{m}</Text>
-            </View>
-          ))}
+        {/* Why this recipe */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>Why this recipe?</Text>
+          <Text style={styles.whyText}>{recipe.why_this_recipe}</Text>
         </View>
-      </View>
+      </ScrollView>
 
-      {/* Ingredients */}
-      <View style={styles.card}>
-        <Text style={styles.sectionLabel}>Ingredients</Text>
-        {recipe.ingredients.map((ing) => (
-          <Text
-            key={`${ing.item_id}-${ing.expiry_date}`}
-            style={styles.listItem}
-          >
-            • {ing.quantity_value} {ing.quantity_unit} {ing.item_name} (exp:{" "}
-            {ing.expiry_date})
-          </Text>
-        ))}
+      {/* Floating Cook Button */}
+      <View style={styles.buttonWrapper}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.cookButton,
+          pressed && { opacity: 0.8 },
+          loading && { opacity: 0.5 },
+        ]}
+        onPress={handleCookRecipe}
+        disabled={loading}
+      >
+        <Text style={styles.cookButtonText}>
+          {loading ? "Cooking recipe and deducting ingredients from inventory..." : "Cook recipe and deduct ingredients from inventory"}
+        </Text>
+      </Pressable>
       </View>
-
-      {/* Steps */}
-      <View style={styles.card}>
-        <Text style={styles.sectionLabel}>Steps</Text>
-        {recipe.steps.map((step, i) => (
-          <Text key={i} style={styles.listItem}>
-            {i + 1}. {step}
-          </Text>
-        ))}
-      </View>
-
-      {/* Why this recipe */}
-      <View style={styles.card}>
-        <Text style={styles.sectionLabel}>Why this recipe?</Text>
-        <Text style={styles.whyText}>{recipe.why_this_recipe}</Text>
-      </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
 export default RecipeDetailScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0B0B0F" },
-  content: { padding: 16, paddingBottom: 32 },
+  outerContainer: { flex: 1, backgroundColor: "#0B0B0F" },
+  container: { flex: 1 },
+  content: { padding: 16 },
 
   centered: {
     flex: 1,
@@ -254,4 +357,29 @@ const styles = StyleSheet.create({
   chipText: { color: "#E3E3FF", fontSize: 12 },
 
   matchText: { fontSize: 12, color: "#A5B4FC" },
+
+  buttonWrapper: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    backgroundColor: "transparent",
+  },
+  cookButton: {
+    backgroundColor: "#16A34A",
+    paddingVertical: 14,
+    borderRadius: 999,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  cookButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
