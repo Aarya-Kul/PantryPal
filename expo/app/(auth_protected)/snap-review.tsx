@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -25,6 +26,23 @@ type ItemDraft = {
 };
 
 const API_BASE_URL = "http://127.0.0.1:8000";
+const ALLOWED_UNITS = [
+  "grams",
+  "kilograms",
+  "milligrams",
+  "ounces",
+  "pounds",
+  "milliliters",
+  "liters",
+  "teaspoons",
+  "tablespoons",
+  "fluid_ounces",
+  "cups",
+  "pints",
+  "quarts",
+  "gallons",
+  "units",
+];
 
 export default function SnapReviewScreen() {
   const { photo } = useLocalSearchParams<{ photo?: string }>();
@@ -201,12 +219,18 @@ export default function SnapReviewScreen() {
                 value={item.quantity_value}
                 onChangeText={(v) => updateItem(idx, "quantity_value", v)}
               />
-              <TextInput
-                style={[styles.input, styles.half]}
-                placeholder="Unit (e.g. pcs, lbs)"
-                value={item.quantity_unit}
-                onChangeText={(v) => updateItem(idx, "quantity_unit", v)}
-              />
+              <View style={[styles.input, styles.half, { paddingVertical: 0 }]}>
+                <RNPickerSelect
+                  onValueChange={(value) => updateItem(idx, "quantity_unit", value || "")}
+                  placeholder={{ label: "Select unit", value: null }}
+                  value={item.quantity_unit}
+                  items={ALLOWED_UNITS.map((u) => ({ label: u, value: u }))}
+                  style={{
+                    inputIOS: styles.pickerInput,
+                    inputAndroid: styles.pickerInput,
+                  }}
+                />
+              </View>
             </View>
             <TextInput
               style={styles.input}
@@ -315,4 +339,10 @@ export default function SnapReviewScreen() {
     marginBottom: 10,
   },
   bannerText: { color: "#0F172A", fontWeight: "600" },
+  pickerInput: {
+    fontSize: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    color: "#0F172A",
+  },
 });
