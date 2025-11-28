@@ -244,29 +244,56 @@ def get_user_preferences(user_id):
 
     return preferences
 
-# add user preferences
-def add_user_preferences(user_id, preferences):
+# set user preferences
+def set_user_preferences(user_id, preferences):
     macronutrient_ids = preferences.get("macronutrients", [])
     cuisine_ids = preferences.get("cuisines", [])
     dietary_restriction_ids = preferences.get("dietary_restrictions", [])
 
-    for mid in macronutrient_ids:
-        supabase_client.table("user_macronutrient_preferences").upsert({
-            "user_id": user_id,
-            "macronutrient_id": mid
-        }).execute()
+    supabase_client.table("user_macronutrient_preferences") \
+        .delete() \
+        .eq("user_id", user_id) \
+        .execute()
 
-    for cid in cuisine_ids:
-        supabase_client.table("user_cuisine_preferences").upsert({
-            "user_id": user_id,
-            "cuisine_id": cid
-        }).execute()
+    supabase_client.table("user_cuisine_preferences") \
+        .delete() \
+        .eq("user_id", user_id) \
+        .execute()
 
-    for drid in dietary_restriction_ids:
-        supabase_client.table("user_dietary_restrictions").upsert({
-            "user_id": user_id,
-            "dietary_restriction_id": drid
-        }).execute()
+    supabase_client.table("user_dietary_restrictions") \
+        .delete() \
+        .eq("user_id", user_id) \
+        .execute()
+
+    if macronutrient_ids:
+        supabase_client.table("user_macronutrient_preferences") \
+            .insert([
+                {"user_id": user_id, "macronutrient_id": mid}
+                for mid in macronutrient_ids
+            ]) \
+            .execute()
+
+    if cuisine_ids:
+        supabase_client.table("user_cuisine_preferences") \
+            .insert([
+                {"user_id": user_id, "cuisine_id": cid}
+                for cid in cuisine_ids
+            ]) \
+            .execute()
+
+    if dietary_restriction_ids:
+        supabase_client.table("user_dietary_restrictions") \
+            .insert([
+                {"user_id": user_id, "dietary_restriction_id": drid}
+                for drid in dietary_restriction_ids
+            ]) \
+            .execute()
+
+    return {
+        "macronutrients": macronutrient_ids,
+        "cuisines": cuisine_ids,
+        "dietary_restrictions": dietary_restriction_ids
+    }
 
 # add nutrition info
 def add_nutrition_info(user_id, recipe_nutrition):

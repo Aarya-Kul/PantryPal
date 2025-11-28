@@ -4,7 +4,7 @@ from pantrypal.db.queries import (
     login_user, 
     get_preferences_tags, 
     get_user_preferences,
-    add_user_preferences, 
+    set_user_preferences, 
     send_password_reset,
     get_nutrient_statistics
 )
@@ -107,15 +107,15 @@ def get_preferences_route():
 
     return jsonify(preferences), 200
 
-@user_bp.route("/add_preferences", methods=["POST"])
-def add_preferences_route():
+@user_bp.route("/set_preferences", methods=["POST"])
+def set_preferences_route():
     try:
         user_id, error = authorize(request)
         if error:
             return jsonify({"error": error}), 401
 
         preferences = request.json
-        add_user_preferences(user_id, preferences)
+        set_user_preferences(user_id, preferences)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

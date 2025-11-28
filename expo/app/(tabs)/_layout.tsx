@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { LogoutButton } from "@/components/logout-button";
+import { PreferencesButton } from "@/components/preferences-button";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -40,7 +41,12 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        headerRight: () => <LogoutButton />,
+        headerRight: () => (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <PreferencesButton />
+            <LogoutButton />
+          </View>
+        ),
       }}
     >
 {/* 
