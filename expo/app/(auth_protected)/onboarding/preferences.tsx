@@ -120,7 +120,7 @@ export default function PreferencesScreen() {
           <View key={category}>
             <Text style={styles.categoryTitle}>{category}</Text>
             <View style={styles.chipContainer}>
-              {items.map((item) => {
+              {(items || []).map((item) => {
                 const active = selected[category]?.includes(item.name);
                 return (
                   <Pressable

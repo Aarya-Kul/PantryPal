@@ -216,9 +216,9 @@ def get_preferences_tags():
     def format_rows(response, id_key, name_key):
         return [{"id": row[id_key], "name": row[name_key]} for row in response.data]
 
-    tags["macronutrients"] = format_rows(macronutrients, "macronutrient_id", "macronutrient_name")
-    tags["cuisines"] = format_rows(cuisines, "cuisine_id", "cuisine_name")
-    tags["dietary_restrictions"] = format_rows(dietary_restrictions, "dietary_restriction_id", "dietary_restriction_name")
+    tags["macronutrients"] = format_rows(macronutrients, "macronutrient_id", "macronutrient_name") or []
+    tags["cuisines"] = format_rows(cuisines, "cuisine_id", "cuisine_name") or []
+    tags["dietary_restrictions"] = format_rows(dietary_restrictions, "dietary_restriction_id", "dietary_restriction_name") or []
 
     return tags
 
@@ -238,9 +238,18 @@ def get_user_preferences(user_id):
         "dietary_restrictions(dietary_restriction_name)"
     ).eq("user_id", user_id).execute()
 
-    preferences["macronutrient_preferences"] = [data['macronutrients']['macronutrient_name'] for data in macronutrient_preferences_data.data]
-    preferences["cuisine_preferences"] = [data['cuisines']['cuisine_name'] for data in cuisine_preferences_data.data]
-    preferences["dietary_restrictions"] = [data['dietary_restrictions']['dietary_restriction_name'] for data in dietary_restrictions_data.data]
+    preferences["macronutrient_preferences"] = [
+        data['macronutrients']['macronutrient_name'] 
+        for data in (macronutrient_preferences_data.data or [])
+    ]
+    preferences["cuisine_preferences"] = [
+        data['cuisines']['cuisine_name'] 
+        for data in (cuisine_preferences_data.data or [])
+    ]
+    preferences["dietary_restrictions"] = [
+        data['dietary_restrictions']['dietary_restriction_name'] 
+        for data in (dietary_restrictions_data.data or [])
+    ]
 
     return preferences
 
