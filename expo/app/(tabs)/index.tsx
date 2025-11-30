@@ -17,6 +17,9 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Record<string, number> | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+  const [expiringCount, setExpiringCount] = useState<number | null>(null);
+  const [expiringLoading, setExpiringLoading] = useState(false);
+  const [expiringError, setExpiringError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -43,6 +46,37 @@ export default function HomeScreen() {
     };
 
     fetchStats();
+    const fetchExpiring = async () => {
+      if (!token) {
+        setExpiringCount(null);
+        return;
+      }
+      try {
+        setExpiringLoading(true);
+        const res = await fetch(`${API_BASE_URL}/api/get_expiring_items`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          throw new Error(`Failed (${res.status})`);
+        }
+        const data = await res.json();
+        // data expected to be { "1 week": [...], "2 days": [...] }
+        const count = Object.values(data || {}).reduce(
+          (sum: number, arr: any) => {
+            if (Array.isArray(arr)) return sum + arr.length;
+            return sum;
+          },
+          0
+        );
+        setExpiringCount(count);
+      } catch (e: any) {
+        setExpiringError(e.message || "Error loading expiring items");
+      } finally {
+        setExpiringLoading(false);
+      }
+    };
+
+    fetchExpiring();
   }, [token]);
 
   return (
@@ -58,6 +92,36 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">Welcome!</ThemedText>
         <HelloWave />
+      </ThemedView>
+      {/* Link to notifications showing a compact nutrient summary */}
+      <ThemedView style={styles.stepContainer}>
+        <Pressable
+          onPress={() => router.push("/notifications")}
+          style={({ pressed }) => [
+            styles.notificationsLink,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          {expiringLoading ? (
+            <ActivityIndicator color="#2BA84A" />
+          ) : expiringError ? (
+            <ThemedText>View notifications</ThemedText>
+          ) : expiringCount && expiringCount > 0 ? (
+            <View style={styles.notificationsContent}>
+              <ThemedText type="defaultSemiBold">
+                {expiringCount} items expiring soon
+              </ThemedText>
+              <ThemedText>Tap to view details</ThemedText>
+            </View>
+          ) : (
+            <View style={styles.notificationsContent}>
+              <ThemedText type="defaultSemiBold">
+                No items expiring soon
+              </ThemedText>
+              <ThemedText>Check notifications</ThemedText>
+            </View>
+          )}
+        </Pressable>
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Nutrient Breakdown</ThemedText>
@@ -82,9 +146,15 @@ export default function HomeScreen() {
             {Object.entries(stats).map(([key, value]) => (
               <View style={styles.statRow} key={key}>
                 <ThemedText style={styles.statLabel}>{key}</ThemedText>
-                <ThemedText style={styles.statValue}>
-                  {Math.round((value || 0) * 100)}%
-                </ThemedText>
+                {value < 1 ? (
+                  <ThemedText style={styles.statValue}>
+                    {Math.round(value * 100)}%
+                  </ThemedText>
+                ) : (
+                  <ThemedText style={styles.statValue}>
+                    {value}g
+                  </ThemedText>
+                )}
               </View>
             ))}
           </View>
@@ -163,5 +233,14 @@ const styles = StyleSheet.create({
   fabText: {
     color: "#fff",
     fontWeight: "900",
+  },
+  notificationsLink: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#EFFAF8",
+  },
+  notificationsContent: {
+    gap: 6,
   },
 });
