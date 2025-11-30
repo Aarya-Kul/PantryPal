@@ -184,7 +184,17 @@ def compute_preference_match_percent(recipe, user_prefs):
     def to_valid_set(values, valid_tags):
         if not values:
             return set()
-        return {v.lower() for v in values if v.lower() in valid_tags}
+
+        cleaned = []
+        for v in values:
+            if isinstance(v, dict):
+                v = v.get("name")  # extract the tag string
+            if isinstance(v, str):
+                v = v.lower()
+                if v in valid_tags:
+                    cleaned.append(v)
+        logger.info(cleaned)
+        return set(cleaned)
 
     valid_cuisines = {t.lower() for t in TAG_CONFIG["cuisines"]}
     valid_macros = {t.lower() for t in TAG_CONFIG["macronutrients"]}
