@@ -227,7 +227,7 @@ def get_user_preferences(user_id):
     preferences = {}
 
     macronutrient_preferences_data = supabase_client.table("user_macronutrient_preferences").select(
-        "macronutrients(macronutrient_name)"
+        "macronutrient_id, goal, macronutrients(macronutrient_name)"
     ).eq("user_id", user_id).execute()
 
     cuisine_preferences_data = supabase_client.table("user_cuisine_preferences").select(
@@ -239,13 +239,19 @@ def get_user_preferences(user_id):
     ).eq("user_id", user_id).execute()
 
     preferences["macronutrient_preferences"] = [
-        data['macronutrients']['macronutrient_name'] 
+        {
+            "id": data["macronutrient_id"],
+            "name": data["macronutrients"]["macronutrient_name"],
+            "goal": data["goal"]
+        }
         for data in (macronutrient_preferences_data.data or [])
     ]
+
     preferences["cuisine_preferences"] = [
         data['cuisines']['cuisine_name'] 
         for data in (cuisine_preferences_data.data or [])
     ]
+
     preferences["dietary_restrictions"] = [
         data['dietary_restrictions']['dietary_restriction_name'] 
         for data in (dietary_restrictions_data.data or [])
@@ -255,7 +261,7 @@ def get_user_preferences(user_id):
 
 # set user preferences
 def set_user_preferences(user_id, preferences):
-    macronutrient_ids = preferences.get("macronutrients", [])
+    macronutrient_entries = preferences.get("macronutrients", [])
     cuisine_ids = preferences.get("cuisines", [])
     dietary_restriction_ids = preferences.get("dietary_restrictions", [])
 
@@ -274,13 +280,15 @@ def set_user_preferences(user_id, preferences):
         .eq("user_id", user_id) \
         .execute()
 
-    if macronutrient_ids:
-        supabase_client.table("user_macronutrient_preferences") \
-            .insert([
-                {"user_id": user_id, "macronutrient_id": mid}
-                for mid in macronutrient_ids
-            ]) \
-            .execute()
+    if macronutrient_entries:
+        supabase_client.table("user_macronutrient_preferences").insert([
+            {
+                "user_id": user_id,
+                "macronutrient_id": entry["id"],
+                "goal": entry.get("goal", 0)  
+            }
+            for entry in macronutrient_entries
+        ]).execute()
 
     if cuisine_ids:
         supabase_client.table("user_cuisine_preferences") \
@@ -299,7 +307,7 @@ def set_user_preferences(user_id, preferences):
             .execute()
 
     return {
-        "macronutrients": macronutrient_ids,
+        "macronutrients": macronutrient_entries,
         "cuisines": cuisine_ids,
         "dietary_restrictions": dietary_restriction_ids
     }
@@ -341,39 +349,80 @@ def add_nutrition_info(user_id, recipe_nutrition):
 
     return response.data[0]
 
-# get nutrient statistics
 def get_nutrient_statistics(user_id, reference_date=None):
     if not reference_date:
         reference_date = date.today().isoformat()
 
-    response = supabase_client.table("user_nutrition") \
-        .select("protein, carbs, fats, dairy, veggies, fruits") \
+    macronutrients_resp = supabase_client.table("macronutrients") \
+        .select("macronutrient_id, macronutrient_name") \
+        .execute()
+
+    macronutrient_map = {row["macronutrient_id"]: row["macronutrient_name"] for row in macronutrients_resp.data or []}
+
+    goals_resp = supabase_client.table("user_macronutrient_preferences") \
+        .select("macronutrient_id, goal") \
+        .eq("user_id", user_id) \
+        .execute()
+
+    goals_map = {}
+    for row in goals_resp.data or []:
+        name = macronutrient_map.get(row["macronutrient_id"])
+        if name:
+            goals_map[name] = float(row.get("goal") or 0)
+
+    nutrition_resp = supabase_client.table("user_nutrition") \
+        .select("*") \
         .eq("user_id", user_id) \
         .eq("date", reference_date) \
         .execute()
-
-    rows = response.data
+    
+    rows = nutrition_resp.data or []
+    logger.info(rows)
     if not rows:
-        return {}
+        return {name: 0.0 for name in macronutrient_map.values()}
 
     totals = {
-        "protein": sum(r["protein"] for r in rows),
-        "carbs": sum(r["carbs"] for r in rows),
-        "fats": sum(r["fats"] for r in rows),
-        "dairy": sum(r["dairy"] for r in rows),
-        "veggies": sum(r["veggies"] for r in rows),
-        "fruits": sum(r["fruits"] for r in rows),
+        "protein": sum(r.get("protein", 0) for r in rows),
+        "carbs": sum(r.get("carbs", 0) for r in rows),
+        "fats": sum(r.get("fats", 0) for r in rows),
+        "dairy": sum(r.get("dairy", 0) for r in rows),
+        "veggies": sum(r.get("veggies", 0) for r in rows),
+        "fruits": sum(r.get("fruits", 0) for r in rows),
     }
 
-    overall_total = sum(totals.values())
+    result = {}
+    for mac_id, name in macronutrient_map.items():
+        nutrient_key = None
+        if "protein" in name.lower():
+            nutrient_key = "protein"
+        elif "carb" in name.lower():
+            nutrient_key = "carbs"
+        elif "fat" in name.lower():
+            nutrient_key = "fats"
+        elif "dairy" in name.lower():
+            nutrient_key = "dairy"
+        elif "veggie" in name.lower():
+            nutrient_key = "veggies"
+        elif "fruit" in name.lower():
+            nutrient_key = "fruits"
 
-    if overall_total == 0:
-        return {key: 0.0 for key in totals}
+        if nutrient_key:
+            total = totals.get(nutrient_key, 0)
+            goal = goals_map.get(name)
+            if goal and goal > 0:
+                if name.lower().startswith("low_"):
+                    # lower is better: percentage = goal / consumed
+                    result[name] = round(goal / max(total, 1), 5)
+                else:
+                    # higher is better: percentage = consumed / goal
+                    result[name] = round(total / goal, 5)
+            else:
+                result[name] = total
+        else:
+            result[name] = sum(totals.values())
 
-    return {
-        key: round(totals[key] / overall_total, 5)
-        for key in totals
-    }
+
+    return result
 
 # get expiring items
 def get_expiring_items(user_id):

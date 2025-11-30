@@ -50,7 +50,7 @@ export type Recipe = {
 type UserPreferences = {
   cuisine_preferences: string[];
   dietary_restrictions: string[];
-  macronutrient_preferences: string[];
+  macronutrient_preferences: { id: number; name: string; goal: number }[];
 };
 
 const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
@@ -83,13 +83,12 @@ const Chip = ({ label }: { label: string }) => (
 );
 
 const RecipesScreen: React.FC = () => {
-  const { token } = useAuth(); // <<< we use auth context
+  const { token } = useAuth();
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loadingPrefs, setLoadingPrefs] = useState(false);
   const [loadingRecipes, setLoadingRecipes] = useState(false);
 
-  // load user preferences on mount
   const fetchPreferences = useCallback(async () => {
     if (!token) return;
 
@@ -104,7 +103,6 @@ const RecipesScreen: React.FC = () => {
       });
       if (!res.ok) throw new Error(`failed (${res.status})`);
       const data: UserPreferences = await res.json();
-      console.log("prefs: ", data);
       setPrefs(data);
     } catch (err) {
       Alert.alert("Error", "Could not load user preferences.");
@@ -113,7 +111,6 @@ const RecipesScreen: React.FC = () => {
     }
   }, [token]);
 
-  // generate recipes
   const generateRecipes = useCallback(async () => {
     if (!token) {
       Alert.alert("Not logged in", "You must login first.");
@@ -122,7 +119,7 @@ const RecipesScreen: React.FC = () => {
 
     try {
       setLoadingRecipes(true);
-  
+
       const res = await fetch(`${API_BASE_URL}/api/get_recipes`, {
         method: "GET",
         headers: {
@@ -131,15 +128,12 @@ const RecipesScreen: React.FC = () => {
         },
       });
 
-     
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "Failed to get recipes");
       }
 
       const data = await res.json();
-      console.log("recipe data", data)
       setRecipes(data.recipes);
     } catch (err: any) {
       Alert.alert("Error", err.message);
@@ -152,7 +146,7 @@ const RecipesScreen: React.FC = () => {
     router.push({
       pathname: "/Recipe",
       params: {
-        recipe: JSON.stringify(recipe), // pass recipe data as a route param
+        recipe: JSON.stringify(recipe),
       },
     });
   };
@@ -161,7 +155,6 @@ const RecipesScreen: React.FC = () => {
     fetchPreferences();
   }, [fetchPreferences]);
 
-  // If no token → block the page
   if (!token) {
     return (
       <View style={styles.lockedContainer}>
@@ -172,10 +165,6 @@ const RecipesScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>Recipes</Text>
-      </View> */}
-
       {/* PREFS CARD */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Your Preferences</Text>
@@ -183,26 +172,38 @@ const RecipesScreen: React.FC = () => {
 
         {prefs && (
           <>
-            <Text style={styles.sectionLabel}>Cuisines</Text>
-            <View style={styles.chipRow}>
-              {prefs.cuisine_preferences?.map((c) => (
-                <Chip key={c} label={c} />
-              ))}
-            </View>
+            {prefs.cuisine_preferences?.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Cuisines</Text>
+                <View style={styles.chipRow}>
+                  {prefs.cuisine_preferences.map((c) => (
+                    <Chip key={c} label={c} />
+                  ))}
+                </View>
+              </>
+            )}
 
-            <Text style={styles.sectionLabel}>Dietary Restrictions</Text>
-            <View style={styles.chipRow}>
-              {prefs.dietary_restrictions?.map((d) => (
-                <Chip key={d} label={d} />
-              ))}
-            </View>
+            {prefs.dietary_restrictions?.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Dietary Restrictions</Text>
+                <View style={styles.chipRow}>
+                  {prefs.dietary_restrictions.map((d) => (
+                    <Chip key={d} label={d} />
+                  ))}
+                </View>
+              </>
+            )}
 
-            <Text style={styles.sectionLabel}>Macronutrients</Text>
-            <View style={styles.chipRow}>
-              {prefs.macronutrient_preferences?.map((m) => (
-                <Chip key={m} label={m} />
-              ))}
-            </View>
+            {prefs.macronutrient_preferences?.length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>Macronutrients</Text>
+                <View style={styles.chipRow}>
+                  {prefs.macronutrient_preferences.map((m) => (
+                    <Chip key={m.id} label={`${m.name} (${m.goal} g)`} />
+                  ))}
+                </View>
+              </>
+            )}
           </>
         )}
       </View>
@@ -284,7 +285,6 @@ const RecipesScreen: React.FC = () => {
 
 export default RecipesScreen;
 
-// styles unchanged...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0B0B0F" },
   content: { padding: 16 },
@@ -295,9 +295,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B0B0F",
   },
   lockedText: { color: "#fff", fontSize: 16 },
-
-  headerRow: { flexDirection: "row", marginBottom: 16 },
-  screenTitle: { fontSize: 24, fontWeight: "600", color: "#fff" },
 
   card: {
     backgroundColor: "#12121A",

@@ -1,4 +1,3 @@
-// app/onboarding/preferences/_layout.tsx
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
@@ -9,11 +8,8 @@ export default function PreferencesLayout() {
   const lastPage = params.from;
 
   const handleBack = () => {
-    if (!lastPage || lastPage === "/login") {
-      router.replace("/");
-    } else {
-      router.replace(lastPage as any);
-    }
+    if (!lastPage || lastPage === "/login") router.replace("/");
+    else router.replace(lastPage as any);
   };
 
   return (
