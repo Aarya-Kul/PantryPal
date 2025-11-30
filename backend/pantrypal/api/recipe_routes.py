@@ -86,6 +86,8 @@ def get_recipes():
 
         user_prefs = get_user_preferences(user_id)
 
+        logger.info("GOT ALL THE INFO I NEED FOR GEMINI")
+
         # (item_id|expiry_date) -> days_to_expiry
         # using both because an item_id could have different expiries
         inventory_map = {
@@ -131,6 +133,8 @@ def get_recipes():
 
         # Want to sort by highest expiry priority first; min days to expiry; preference match
         # TODO: should be robust enough but need to work on scoring + display
+        logger.info("SORTING RECIPES NOW")
+
         enriched_recipes.sort(
             key=lambda recipe: (
                 -(recipe.get("expiry_priority_stars") or 0),

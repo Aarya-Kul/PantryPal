@@ -427,26 +427,20 @@ def get_nutrient_statistics(user_id, reference_date=None):
 # get expiring items
 def get_expiring_items(user_id):
     notifications = {}
-    today = date.today().isoformat()
+    today = date.today()
 
-    week_notification_data = supabase_client.table("user_inventory").select(
-        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
-    ).eq("user_id", user_id) \
-     .gte("expiry_date", today + timedelta(days=3)) \
-     .lte("expiry_date", today + timedelta(days=7)) \
-     .order("expiry_date") \
-     .execute()
+    def fetch_range(min_days, max_days):
+        return (
+            supabase_client.table("user_inventory")
+            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
+            .eq("user_id", user_id)
+            .gte("expiry_date", (today + timedelta(days=min_days)).isoformat())
+            .lte("expiry_date", (today + timedelta(days=max_days)).isoformat())
+            .order("expiry_date")
+            .execute().data
+        )
 
-
-    two_day_notification_data = supabase_client.table("user_inventory").select(
-        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
-    ).eq("user_id", user_id) \
-     .gte("expiry_date", today + timedelta(days=1)) \
-     .lte("expiry_date", today + timedelta(days=2)) \
-     .order("expiry_date") \
-     .execute()
-
-    notifications["1 week"] = week_notification_data.data
-    notifications["2 days"] = two_day_notification_data.data
+    notifications["1 week"] = fetch_range(3, 7)
+    notifications["2 days"]  = fetch_range(1, 2)
 
     return notifications
