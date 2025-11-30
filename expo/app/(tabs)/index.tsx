@@ -79,88 +79,106 @@ export default function HomeScreen() {
     fetchExpiring();
   }, [token]);
 
+  function pluralize(count: number, singular: string, plural: string) {
+    return count === 1 ? singular : plural;
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: "#2BA84A", dark: "#1D3D47" }}
-      headerImage={
-        <Image
-          source={require("@/assets/images/logo.png")}
-          style={styles.reactLogo}
-        />
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      {/* Link to notifications showing a compact nutrient summary */}
-      <ThemedView style={styles.stepContainer}>
-        <Pressable
-          onPress={() => router.push("/notifications")}
-          style={({ pressed }) => [
-            styles.notificationsLink,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          {expiringLoading ? (
-            <ActivityIndicator color="#2BA84A" />
-          ) : expiringError ? (
-            <ThemedText>View notifications</ThemedText>
-          ) : expiringCount && expiringCount > 0 ? (
-            <View style={styles.notificationsContent}>
-              <ThemedText type="defaultSemiBold">
-                {expiringCount} items expiring soon
-              </ThemedText>
-              <ThemedText>Tap to view details</ThemedText>
-            </View>
+    <>
+      <ParallaxScrollView
+        headerBackgroundColor={{ light: "#2BA84A", dark: "#1D3D47" }}
+        headerImage={
+          <Image
+            source={require("@/assets/images/logo.png")}
+            style={styles.reactLogo}
+          />
+        }
+      >
+        <ThemedView style={styles.titleContainer}>
+          <ThemedText type="title">Welcome!</ThemedText>
+          <HelloWave />
+        </ThemedView>
+        {/* Link to notifications showing a compact nutrient summary */}
+        <ThemedView style={styles.stepContainer}>
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={({ pressed }) => [
+              styles.notificationsLink,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            {expiringLoading ? (
+              <ActivityIndicator color="#2BA84A" />
+            ) : expiringError ? (
+              <ThemedText>View notifications</ThemedText>
+            ) : expiringCount && expiringCount > 0 ? (
+              <View style={styles.notificationsContent}>
+                <ThemedText type="defaultSemiBold">
+                  {expiringCount} {pluralize(expiringCount, "item", "items")}{" "}
+                  expiring soon
+                </ThemedText>
+                <ThemedText>Tap to view details</ThemedText>
+              </View>
+            ) : (
+              <View style={styles.notificationsContent}>
+                <ThemedText type="defaultSemiBold">
+                  No items expiring soon
+                </ThemedText>
+                <ThemedText>Check notifications</ThemedText>
+              </View>
+            )}
+          </Pressable>
+        </ThemedView>
+        <ThemedView style={styles.stepContainer}>
+          <ThemedText type="subtitle">Nutrient Breakdown</ThemedText>
+
+          {!token ? (
+            <ThemedText>Login to view your nutrient statistics.</ThemedText>
+          ) : statsLoading ? (
+            <ActivityIndicator
+              size="large"
+              color="#2BA84A"
+              style={{ marginTop: 40 }}
+            />
+          ) : statsError ? (
+            <ThemedText>{statsError}</ThemedText>
+          ) : !stats || Object.keys(stats).length === 0 ? (
+            <ThemedText>
+              No nutrition data available for today. Generate a recipe to get
+              some!
+            </ThemedText>
           ) : (
-            <View style={styles.notificationsContent}>
-              <ThemedText type="defaultSemiBold">
-                No items expiring soon
-              </ThemedText>
-              <ThemedText>Check notifications</ThemedText>
+            <View style={styles.statsContainer}>
+              {Object.entries(stats).map(([key, value]) => (
+                <View style={styles.statRow} key={key}>
+                  <ThemedText style={styles.statLabel}>{key}</ThemedText>
+                  {value < 1 ? (
+                    <ThemedText style={styles.statValue}>
+                      {Math.round(value * 100)}%
+                    </ThemedText>
+                  ) : (
+                    <ThemedText style={styles.statValue}>{value}g</ThemedText>
+                  )}
+                </View>
+              ))}
             </View>
           )}
-        </Pressable>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Nutrient Breakdown</ThemedText>
-
-        {!token ? (
-          <ThemedText>Login to view your nutrient statistics.</ThemedText>
-        ) : statsLoading ? (
-          <ActivityIndicator
-            size="large"
-            color="#2BA84A"
-            style={{ marginTop: 40 }}
-          />
-        ) : statsError ? (
-          <ThemedText>{statsError}</ThemedText>
-        ) : !stats || Object.keys(stats).length === 0 ? (
-          <ThemedText>
-            No nutrition data available for today. Generate a recipe to get
-            some!
-          </ThemedText>
-        ) : (
-          <View style={styles.statsContainer}>
-            {Object.entries(stats).map(([key, value]) => (
-              <View style={styles.statRow} key={key}>
-                <ThemedText style={styles.statLabel}>{key}</ThemedText>
-                {value < 1 ? (
-                  <ThemedText style={styles.statValue}>
-                    {Math.round(value * 100)}%
-                  </ThemedText>
-                ) : (
-                  <ThemedText style={styles.statValue}>
-                    {value}g
-                  </ThemedText>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-      </ThemedView>
-      {/* Floating action button to snap a photo/receipt */}
+        </ThemedView>
+        {/* Floating action button to snap a photo/receipt */}
+        <View>
+          <Pressable
+            onPress={() => router.push("/snap-photo")}
+            style={({ pressed }) => [
+              styles.fabHidden,
+              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+            ]}
+          >
+            <ThemedText type="title" style={styles.fabText}>
+              +
+            </ThemedText>
+          </Pressable>
+        </View>
+      </ParallaxScrollView>
       <View>
         <Pressable
           onPress={() => router.push("/snap-photo")}
@@ -174,7 +192,7 @@ export default function HomeScreen() {
           </ThemedText>
         </Pressable>
       </View>
-    </ParallaxScrollView>
+    </>
   );
 }
 
@@ -215,10 +233,23 @@ const styles = StyleSheet.create({
     left: 0,
     position: "absolute",
   },
+  fabHidden: {
+    visibility: "hidden",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#2BA84A",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2BA84A",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
   fab: {
-    position: "fixed",
+    position: "absolute",
     bottom: 30,
-    right: 30,
+    right: 20,
     width: 60,
     height: 60,
     borderRadius: 30,
