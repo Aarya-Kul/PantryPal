@@ -90,23 +90,20 @@ export default function HomeScreen() {
           </View>
         )}
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="title">Snap Photo of Items/Scan Receipt</ThemedText>
-        {/* Floating action button to snap a photo/receipt */}
-        <View>
-          <Pressable
-            onPress={() => router.push("/snap-photo")}
-            style={({ pressed }) => [
-              styles.fab,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-            ]}
-          >
-            <ThemedText type="title" style={styles.fabText}>
-              +
-            </ThemedText>
-          </Pressable>
-        </View>
-      </ThemedView>
+      {/* Floating action button to snap a photo/receipt */}
+      <View>
+        <Pressable
+          onPress={() => router.push("/snap-photo")}
+          style={({ pressed }) => [
+            styles.fab,
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+          ]}
+        >
+          <ThemedText type="title" style={styles.fabText}>
+            +
+          </ThemedText>
+        </Pressable>
+      </View>
     </ParallaxScrollView>
   );
 }
@@ -149,6 +146,9 @@ const styles = StyleSheet.create({
     position: "absolute",
   },
   fab: {
+    position: "fixed",
+    bottom: 30,
+    right: 30,
     width: 60,
     height: 60,
     borderRadius: 30,
