@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -25,6 +26,23 @@ type ItemDraft = {
 };
 
 const API_BASE_URL = "http://127.0.0.1:8000";
+const ALLOWED_UNITS = [
+  "grams",
+  "kilograms",
+  "milligrams",
+  "ounces",
+  "pounds",
+  "milliliters",
+  "liters",
+  "teaspoons",
+  "tablespoons",
+  "fluid_ounces",
+  "cups",
+  "pints",
+  "quarts",
+  "gallons",
+  "units",
+];
 
 export default function SnapReviewScreen() {
   const { photo } = useLocalSearchParams<{ photo?: string }>();
@@ -32,6 +50,7 @@ export default function SnapReviewScreen() {
   const [items, setItems] = useState<ItemDraft[]>([
     { item_name: "", quantity_value: "", quantity_unit: "", expiry_date: "" },
   ]);
+  const [unitMapping, setUnitMapping] = useState<{ item_name: string; unit: string }[]>([]);
   const [saving, setSaving] = useState(false);
    const [extracting, setExtracting] = useState(false);
 
@@ -107,6 +126,48 @@ export default function SnapReviewScreen() {
 
     extract();
   }, [photo, token]);
+
+  // Pull unit mapping so existing items show only their mapped unit (same logic as Inventory).
+  useEffect(() => {
+    const loadUnits = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/get_inventory_unit_mapping`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUnitMapping(data.mapping || []);
+        }
+      } catch {
+        // ignore; fall back to ALLOWED_UNITS
+      }
+    };
+    loadUnits();
+  }, [token]);
+
+  const getUnitsForItem = (name: string) => {
+    const match = unitMapping.find(
+      (entry) => entry.item_name.toLowerCase() === name.toLowerCase()
+    );
+    return match ? [match.unit] : ALLOWED_UNITS;
+  };
+
+  // If mapping arrives and an item exists in mapping, enforce that unit.
+  useEffect(() => {
+    if (!unitMapping.length) return;
+    setItems((prev) =>
+      prev.map((it) => {
+        const match = unitMapping.find(
+          (entry) => entry.item_name.toLowerCase() === it.item_name.toLowerCase()
+        );
+        if (match && it.quantity_unit !== match.unit) {
+          return { ...it, quantity_unit: match.unit };
+        }
+        return it;
+      })
+    );
+  }, [unitMapping]);
 
   const handleSave = async () => {
     if (!token) {
@@ -201,12 +262,18 @@ export default function SnapReviewScreen() {
                 value={item.quantity_value}
                 onChangeText={(v) => updateItem(idx, "quantity_value", v)}
               />
-              <TextInput
-                style={[styles.input, styles.half]}
-                placeholder="Unit (e.g. pcs, lbs)"
-                value={item.quantity_unit}
-                onChangeText={(v) => updateItem(idx, "quantity_unit", v)}
-              />
+              <View style={[styles.input, styles.half, { paddingVertical: 0 }]}>
+                <RNPickerSelect
+                  onValueChange={(value) => updateItem(idx, "quantity_unit", value || "")}
+                  placeholder={{ label: "Select unit", value: null }}
+                  value={item.quantity_unit}
+                  items={getUnitsForItem(item.item_name).map((u) => ({ label: u, value: u }))}
+                  style={{
+                    inputIOS: styles.pickerInput,
+                    inputAndroid: styles.pickerInput,
+                  }}
+                />
+              </View>
             </View>
             <TextInput
               style={styles.input}
@@ -315,4 +382,10 @@ export default function SnapReviewScreen() {
     marginBottom: 10,
   },
   bannerText: { color: "#0F172A", fontWeight: "600" },
+  pickerInput: {
+    fontSize: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    color: "#0F172A",
+  },
 });

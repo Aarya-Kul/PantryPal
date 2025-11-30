@@ -35,6 +35,7 @@ def upload_receipt():
     image_data = image_file.read()
 
     text = scan_receipts(image_data)
+    logger.info("OCR text:\n%s", text)
 
     prompt = f"""
         Today's date is {datetime.now().date()}
