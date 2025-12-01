@@ -1,4 +1,5 @@
-// app/login.tsx
+// app/(login)/login.tsx
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -10,25 +11,37 @@ import {
   StyleSheet,
   Text,
   TextInput,
-
-  View
+  View,
 } from "react-native";
+
 import logo from "../../assets/images/logo.png";
+import AiTransparencyModal from "../../components/AiTransparencyModal";
 import { useAuth } from "../../context/AuthContext";
+
+const AI_KEY_PREFIX = "ai_disclosure_accepted_";
 
 const LoginScreen: React.FC = () => {
   const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // For AI modal gating
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [currentAiKey, setCurrentAiKey] = useState<string | null>(null);
+  const [pendingLogin, setPendingLogin] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   const handleSubmit = async () => {
     if (submitting) return;
 
     setError(null);
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const emailRegex = /^\S+@\S+\.\S+$/;
 
     if (!trimmedEmail || !password) {
@@ -40,36 +53,72 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
-    setSubmitting(true);
+    const aiKey = `${AI_KEY_PREFIX}${trimmedEmail}`;
 
     try {
-      // Just log in; this sets the token in context + AsyncStorage
-      await login(trimmedEmail, password);
+      // Check if THIS email has already accepted the disclaimer
+      const accepted = await AsyncStorage.getItem(aiKey);
 
-      // DO NOT navigate here.
-      // ProtectedLayout will detect token, check prefs,
-      // and redirect to either /onboarding/preferences or /(tabs).
-    } catch (e: any) {
-      setError(e.message ?? "Login failed. Please try again.");
+      if (accepted === "true") {
+        // Already accepted for this user → normal login flow
+        setSubmitting(true);
+        await login(trimmedEmail, password);
+        // Protected layout will handle navigation after login
+        return;
+      }
+
+      // Not yet accepted for this user → show AI modal instead of logging in
+      setPendingLogin({ email: trimmedEmail, password });
+      setCurrentAiKey(aiKey);
+      setShowAiModal(true);
+    } catch (e) {
+      setError("Something went wrong checking AI acceptance. Please try again.");
     } finally {
+      // Note: we only set submitting true while actually calling login
       setSubmitting(false);
     }
   };
 
+  const handleAcceptAi = async () => {
+    // Defensive: if we somehow lost state, just close the modal
+    if (!currentAiKey || !pendingLogin) {
+      setShowAiModal(false);
+      return;
+    }
+
+    try {
+      await AsyncStorage.setItem(currentAiKey, "true");
+    } catch (e) {
+      // If persisting fails, we still allow login once
+    }
+
+    // Now actually perform the login for this user
+    setShowAiModal(false);
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await login(pendingLogin.email, pendingLogin.password);
+      // Navigation handled by auth-protected layout
+    } catch (e: any) {
+      setError(e?.message ?? "Login failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+      setPendingLogin(null);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.select({ ios: "padding", android: undefined })}
     >
+      {/* AI Transparency Modal – opens when this user hasn't accepted yet */}
+      <AiTransparencyModal visible={showAiModal} onAccept={handleAcceptAi} />
+
       <View style={styles.inner}>
-        <Image
-            source={logo}
-            style={styles.logo}
-            resizeMode="contain"
-        />
+        <Image source={logo} style={styles.logo} resizeMode="contain" />
         <Text style={styles.appTitle}>PantryPal</Text>
-        {/* <Text style={styles.subtitle}>Sign in to continue</Text> */}
 
         <View style={styles.card}>
           {error && <Text style={styles.error}>{error}</Text>}
@@ -114,14 +163,13 @@ const LoginScreen: React.FC = () => {
             )}
           </Pressable>
 
-          {/* Postman example message (for testers) */}
+          {/* Example creds hint */}
           <Text style={styles.hint}>
             Postman example login:
             {"\n"}Email: testuser123@gmail.com
             {"\n"}Password: abc123
           </Text>
 
-          {/* Links row */}
           <View style={styles.linkRow}>
             <Pressable onPress={() => router.push("/signup")}>
               <Text style={styles.linkText}>Create an account</Text>
@@ -155,12 +203,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     textAlign: "center",
     marginBottom: 30,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#a5b4fc",
-    textAlign: "center",
-    marginBottom: 24,
   },
   card: {
     backgroundColor: "#111827",

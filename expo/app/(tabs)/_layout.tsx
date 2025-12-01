@@ -3,6 +3,7 @@ import { Redirect, Tabs } from "expo-router";
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
 
+import { AiDisclaimerButton } from "@/components/ai-disclaimer-button";
 import { HapticTab } from "@/components/haptic-tab";
 import { LogoutButton } from "@/components/logout-button";
 import { PreferencesButton } from "@/components/preferences-button";
@@ -43,6 +44,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerRight: () => (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <AiDisclaimerButton />
             <PreferencesButton />
             <LogoutButton />
           </View>

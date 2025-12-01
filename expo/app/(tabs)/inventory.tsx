@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
 
-
 import { useAuth } from "@/context/AuthContext";
 
 const ALLOWED_UNITS = [
@@ -33,7 +32,6 @@ const ALLOWED_UNITS = [
   "gallons",
   "units",
 ];
-
 
 type InventoryItem = {
   item_id: number;
@@ -74,6 +72,11 @@ export default function InventoryScreen() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [unitMapping, setUnitMapping] = useState<{ item_name: string; unit: string }[]>([]);
 
+  // Today in YYYY-MM-DD for easy string comparison
+  const todayStr = useMemo(
+    () => new Date().toISOString().slice(0, 10),
+    []
+  );
 
   const selectedItem = useMemo(() => {
     if (!selectedKeys.length) return undefined;
@@ -82,6 +85,28 @@ export default function InventoryScreen() {
       (item) => `${item.item_id}-${item.expiry_date}` === key
     );
   }, [inventory, selectedKeys]);
+
+  // Helper: check if an item is expired
+  const isItemExpired = (item?: InventoryItem) => {
+    if (!item || !item.expiry_date) return false;
+    return item.expiry_date < todayStr;
+  };
+
+  // Partition inventory into expired vs active based on expiry_date < today
+  const { expiredItems, activeItems } = useMemo(() => {
+    const expired: InventoryItem[] = [];
+    const active: InventoryItem[] = [];
+
+    for (const item of inventory) {
+      if (item.expiry_date && item.expiry_date < todayStr) {
+        expired.push(item);
+      } else {
+        active.push(item);
+      }
+    }
+
+    return { expiredItems: expired, activeItems: active };
+  }, [inventory, todayStr]);
 
   const friendlyName = (item: InventoryItem) =>
     item.item_name || item.items?.item_name || "Unnamed";
@@ -102,7 +127,7 @@ export default function InventoryScreen() {
       setUnitMapping(data.mapping || []);
     }
   }, [token]);
-  
+
   const getUnitsForItem = (name: string) => {
     const match = unitMapping.find(
       (entry) => entry.item_name.toLowerCase() === name.toLowerCase()
@@ -143,6 +168,16 @@ export default function InventoryScreen() {
       Alert.alert("Select an item", "Pick one item to edit.");
       return;
     }
+
+    // Block editing expired items
+    if (isItemExpired(selectedItem)) {
+      Alert.alert(
+        "Cannot edit expired items",
+        "Expired items can't be edited. You can remove them from your inventory instead."
+      );
+      return;
+    }
+
     setMode("edit");
     setForm({
       item_name: friendlyName(selectedItem),
@@ -220,6 +255,8 @@ export default function InventoryScreen() {
         });
         if (!res.ok) throw new Error(`Failed (${res.status})`);
       } else if (mode === "edit" && selectedItem) {
+        // Note: we don't allow switching an item from expired to fresh via edit
+        // because openEdit blocks expired items from being edited.
         const res = await fetch(`${API_BASE_URL}/api/edit_inventory_item`, {
           method: "POST",
           headers: {
@@ -259,11 +296,13 @@ export default function InventoryScreen() {
     );
   }
 
+  const selectedIsExpired = selectedItem ? isItemExpired(selectedItem) : false;
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Inventory</Text>
+          {/* <Text style={styles.title}>Inventory</Text> */}
           <Text style={styles.subtle}>
             {inventory.length} {inventory.length === 1 ? "item" : "items"}
           </Text>
@@ -272,33 +311,98 @@ export default function InventoryScreen() {
         {loading ? (
           <ActivityIndicator size="large" color="#2BA84A" style={{ marginTop: 40 }} />
         ) : (
-          inventory.map((item) => {
-            const rowKey = `${item.item_id}-${item.expiry_date}`;
-            const isSelected = selectedKeys.includes(rowKey);
-            return (
-              <Pressable
-                key={rowKey}
-                onPress={() => toggleSelect(rowKey)}
-                style={[
-                  styles.card,
-                  isSelected && { borderColor: "#2BA84A", backgroundColor: "#EFF8F0" },
-                ]}
-              >
-                <View style={styles.cardHeader}>
-                  <Text style={styles.itemName}>{friendlyName(item)}</Text>
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={20} color="#2BA84A" />
-                  )}
-                </View>
-                <View style={styles.metaRow}>
-                  <Text style={styles.meta}>
-                    Qty: {item.quantity_value} {item.quantity_unit}
-                  </Text>
-                  <Text style={styles.meta}>Expires: {item.expiry_date}</Text>
-                </View>
-              </Pressable>
-            );
-          })
+          <>
+            {expiredItems.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.sectionHeader}>Expired items</Text>
+                <Text style={styles.sectionSubtle}>
+                  These items are past their expiry date. Do not eat them. Safely discard and
+                  try generating recipes earlier next time to use similar items before they expire.
+                </Text>
+
+                {expiredItems.map((item) => {
+                  const rowKey = `${item.item_id}-${item.expiry_date}`;
+                  const isSelected = selectedKeys.includes(rowKey);
+                  return (
+                    <Pressable
+                      key={rowKey}
+                      onPress={() => toggleSelect(rowKey)}
+                      style={[
+                        styles.card,
+                        styles.expiredCard,
+                        isSelected && {
+                          borderColor: "#F97373",
+                          backgroundColor: "#FEF2F2",
+                        },
+                      ]}
+                    >
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.itemName}>{friendlyName(item)}</Text>
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>Expired</Text>
+                        </View>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Text style={styles.meta}>
+                          Qty: {item.quantity_value} {item.quantity_unit}
+                        </Text>
+                        <Text style={[styles.meta, { color: "#B91C1C" }]}>
+                          Expired: {item.expiry_date}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {activeItems.length > 0 && (
+              <View>
+                <Text style={styles.sectionHeader}>In-date items</Text>
+                <Text style={styles.sectionSubtle}>
+                  These items are still within their listed expiry date. Always double-check
+                  how they look and smell before using them.
+                </Text>
+
+                {activeItems.map((item) => {
+                  const rowKey = `${item.item_id}-${item.expiry_date}`;
+                  const isSelected = selectedKeys.includes(rowKey);
+                  return (
+                    <Pressable
+                      key={rowKey}
+                      onPress={() => toggleSelect(rowKey)}
+                      style={[
+                        styles.card,
+                        isSelected && {
+                          borderColor: "#2BA84A",
+                          backgroundColor: "#EFF8F0",
+                        },
+                      ]}
+                    >
+                      <View style={styles.cardHeader}>
+                        <Text style={styles.itemName}>{friendlyName(item)}</Text>
+                        {isSelected && (
+                          <Ionicons name="checkmark-circle" size={20} color="#2BA84A" />
+                        )}
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Text style={styles.meta}>
+                          Qty: {item.quantity_value} {item.quantity_unit}
+                        </Text>
+                        <Text style={styles.meta}>Expires: {item.expiry_date}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {!expiredItems.length && !activeItems.length && (
+              <Text style={styles.sectionSubtle}>
+                Your inventory is empty. Add items to start tracking.
+              </Text>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -311,18 +415,18 @@ export default function InventoryScreen() {
           tone="primary"
         />
         <ActionButton
-        label="Edit"
-        icon="create-outline"
-        onPress={openEdit}
-        disabled={!selectedKeys.length || saving}
-      />
-      <ActionButton
-        label="Remove"
-        icon="trash-outline"
-        onPress={handleRemove}
-        disabled={!selectedKeys.length || saving}
-        tone="danger"
-      />
+          label="Edit"
+          icon="create-outline"
+          onPress={openEdit}
+          disabled={!selectedKeys.length || saving || selectedIsExpired}
+        />
+        <ActionButton
+          label="Remove"
+          icon="trash-outline"
+          onPress={handleRemove}
+          disabled={!selectedKeys.length || saving}
+          tone="danger"
+        />
       </View>
 
       <Modal
@@ -378,7 +482,9 @@ export default function InventoryScreen() {
                 style={[styles.modalButton, styles.outlineButton]}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={[styles.modalButtonText, { color: "#0F172A" }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: "#0F172A" }]}>
+                  Cancel
+                </Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButton, styles.filledButton]}
@@ -569,6 +675,32 @@ const styles = StyleSheet.create({
   },
   modalButtonText: {
     color: "#fff",
+    fontWeight: "700",
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+  },
+  sectionSubtle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginBottom: 8,
+  },
+  expiredCard: {
+    borderColor: "#FCA5A5",
+    backgroundColor: "#FEF2F2",
+  },
+  badge: {
+    backgroundColor: "#F87171",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    color: "#FEF2F2",
+    fontSize: 11,
     fontWeight: "700",
   },
 });
