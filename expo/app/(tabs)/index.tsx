@@ -113,7 +113,7 @@ export default function HomeScreen() {
                     You have {expiringCount} expired{" "}
                     {pluralize(expiringCount, "item", "items")}{" "}
                   </Text>
-                  <Text style={styles.subtle}>Tap to view details. Don't worry, these won't be used to curate recipes. Please remove these items from the inventory or add in a new item with an updated expiration date.</Text>
+                  <Text style={styles.subtle}>Tap to view details. Don&apos;t worry, these won&apos;t be used to curate recipes. Please remove these items from the inventory or add in a new item with an updated expiration date.</Text>
                 </View>
               ) : (
                 <View style={styles.notificationsContent}>
