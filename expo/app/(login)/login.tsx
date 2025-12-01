@@ -56,28 +56,25 @@ const LoginScreen: React.FC = () => {
     const aiKey = `${AI_KEY_PREFIX}${trimmedEmail}`;
 
     try {
-      // Check if THIS email has already accepted the disclaimer
       const accepted = await AsyncStorage.getItem(aiKey);
 
       if (accepted === "true") {
-        // Already accepted for this user → normal login flow
         setSubmitting(true);
         await login(trimmedEmail, password);
-        // Protected layout will handle navigation after login
         return;
       }
 
-      // Not yet accepted for this user → show AI modal instead of logging in
+      // 📌 FIRST TIME USER — show modal and STOP
       setPendingLogin({ email: trimmedEmail, password });
       setCurrentAiKey(aiKey);
       setShowAiModal(true);
+      return;  // <-- IMPORTANT
     } catch (e) {
+      console.error("AI check failed:", e);
       setError("Something went wrong checking AI acceptance. Please try again.");
-    } finally {
-      // Note: we only set submitting true while actually calling login
-      setSubmitting(false);
     }
   };
+
 
   const handleAcceptAi = async () => {
     // Defensive: if we somehow lost state, just close the modal
