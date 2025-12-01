@@ -1,4 +1,3 @@
-// app/(tabs)/recipes.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -230,8 +229,10 @@ const RecipesScreen: React.FC = () => {
           onPress={() => handleOpenRecipe(recipe)}
         >
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{recipe.name}</Text>
-            <Text style={styles.matchText}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {recipe.name}
+            </Text>
+            <Text style={styles.matchText} numberOfLines={1}>
               {recipe.preference_match_percent ?? 0}% match
             </Text>
           </View>
@@ -308,9 +309,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
+    flexWrap: "wrap", // allow wrapping
   },
 
-  cardTitle: { fontSize: 18, fontWeight: "600", color: "#fff" },
+  cardTitle: { fontSize: 18, fontWeight: "600", color: "#fff", flex: 1, flexShrink: 1 },
   sectionLabel: {
     marginTop: 10,
     marginBottom: 4,
@@ -350,5 +352,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#4F46E5",
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  matchText: { fontSize: 12, color: "#A5B4FC" },
+  matchText: { fontSize: 12, color: "#A5B4FC", flexShrink: 0 },
 });

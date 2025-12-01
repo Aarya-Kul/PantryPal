@@ -6,7 +6,9 @@ import {
   Alert,
   Modal,
   Pressable,
-  ScrollView, StyleSheet, Text,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
   View
 } from "react-native";
@@ -44,8 +46,6 @@ const emptyForm: FormState = {
   quantity_unit: "",
   expiry_date: "",
 };
-
-// Use localhost for web; change to your LAN IP if testing on device.
 
 export default function InventoryScreen() {
   const { token } = useAuth();
@@ -119,7 +119,6 @@ export default function InventoryScreen() {
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const data = await res.json();
-      console.log("Fetched inventory:", data.inventory);
       setInventory(data.inventory || []);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Could not load inventory.");
@@ -128,7 +127,6 @@ export default function InventoryScreen() {
     }
   }, [token]);
 
-  // Auto-refresh on screen focus
   useFocusEffect(
     useCallback(() => {
       fetchInventory();
@@ -153,7 +151,7 @@ export default function InventoryScreen() {
       quantity_unit: selectedItem.quantity_unit ?? "",
       expiry_date: selectedItem.expiry_date ?? "",
     });
-    setIsLeftover(selectedItem.is_leftover ?? false);
+    setIsLeftover(false); // always hide leftover in edit mode
     setModalVisible(true);
   };
 
@@ -231,7 +229,6 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
-          {/* <Text style={styles.title}>Inventory</Text> */}
           <Text style={styles.subtle}>
             {inventory.length} {inventory.length === 1 ? "item" : "items"}
           </Text>
@@ -282,7 +279,6 @@ export default function InventoryScreen() {
                             <Text style={styles.badgeText}>Expired</Text>
                           </View>
                         </View>
-
                       </View>
                       <View style={styles.metaRow}>
                         <Text style={styles.meta}>
@@ -397,17 +393,21 @@ export default function InventoryScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Item name"
+                placeholderTextColor="#64748B"
                 value={form.item_name}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, item_name: v }))}
               />
             )}
+
             <TextInput
               style={styles.input}
               placeholder="Quantity (e.g. 2)"
+              placeholderTextColor="#64748B"
               keyboardType="numeric"
               value={form.quantity_value}
               onChangeText={(v) => setForm((prev) => ({ ...prev, quantity_value: v }))}
             />
+
             <RNPickerSelect
               onValueChange={(value) =>
                 setForm((prev) => ({ ...prev, quantity_unit: value }))
@@ -416,55 +416,61 @@ export default function InventoryScreen() {
               value={form.quantity_unit}
               items={getUnitsForItem(form.item_name).map((u) => ({ label: u, value: u }))}
               style={{
-                inputIOS: styles.input,
-                inputAndroid: styles.input,
+                inputIOS: { ...styles.input, color: "#0F172A" },
+                inputAndroid: { ...styles.input, color: "#0F172A" },
               }}
             />
+
             {mode === "add" && (
               <TextInput
                 style={styles.input}
                 placeholder="Expiry date (YYYY-MM-DD)"
+                placeholderTextColor="#64748B"
                 value={form.expiry_date}
                 onChangeText={(v) => setForm((prev) => ({ ...prev, expiry_date: v }))}
               />
             )}
-            <Text style={styles.label}>Is this a leftover?</Text>
 
-            <View style={styles.binaryContainer}>
-              <Pressable
-                style={[
-                  styles.binaryOption,
-                  isLeftover === true && styles.binaryOptionSelected
-                ]}
-                onPress={() => setIsLeftover(true)}
-              >
-                <Text
-                  style={[
-                    styles.binaryOptionText,
-                    isLeftover === true && styles.binaryOptionTextSelected
-                  ]}
-                >
-                  Yes
-                </Text>
-              </Pressable>
+            {mode === "add" && (
+              <>
+                <Text style={styles.label}>Is this a leftover?</Text>
+                <View style={styles.binaryContainer}>
+                  <Pressable
+                    style={[
+                      styles.binaryOption,
+                      isLeftover === true && styles.binaryOptionSelected
+                    ]}
+                    onPress={() => setIsLeftover(true)}
+                  >
+                    <Text
+                      style={[
+                        styles.binaryOptionText,
+                        isLeftover === true && styles.binaryOptionTextSelected
+                      ]}
+                    >
+                      Yes
+                    </Text>
+                  </Pressable>
 
-              <Pressable
-                style={[
-                  styles.binaryOption,
-                  isLeftover === false && styles.binaryOptionSelected
-                ]}
-                onPress={() => setIsLeftover(false)}
-              >
-                <Text
-                  style={[
-                    styles.binaryOptionText,
-                    isLeftover === false && styles.binaryOptionTextSelected
-                  ]}
-                >
-                  No
-                </Text>
-              </Pressable>
-            </View>
+                  <Pressable
+                    style={[
+                      styles.binaryOption,
+                      isLeftover === false && styles.binaryOptionSelected
+                    ]}
+                    onPress={() => setIsLeftover(false)}
+                  >
+                    <Text
+                      style={[
+                        styles.binaryOptionText,
+                        isLeftover === false && styles.binaryOptionTextSelected
+                      ]}
+                    >
+                      No
+                    </Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
 
             <View style={styles.modalActions}>
               <Pressable
@@ -531,108 +537,34 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 100,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  subtle: {
-    fontSize: 14,
-    color: "#64748B",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+  content: { padding: 16, paddingBottom: 80 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 12 },
+  subtle: { color: "#64748B" },
+  sectionHeader: { fontWeight: "600", fontSize: 16, marginVertical: 8 },
+  sectionSubtle: { fontSize: 12, color: "#64748B", marginBottom: 8 },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: "#0F172A",
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  meta: {
-    color: "#475569",
-    fontSize: 13,
-  },
-  actionsBar: {
-    flexDirection: "row",
-    padding: 12,
-    gap: 10,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 10,
+    borderColor: "#CBD5E1",
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  lockedContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-  },
-  lockedText: { color: "#0F172A", fontSize: 16 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
+    padding: 12,
+    marginBottom: 8,
     backgroundColor: "#fff",
-    width: "100%",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#0F172A",
-  },
+  expiredCard: { backgroundColor: "#FEF2F2", borderColor: "#F87171" },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  itemName: { fontWeight: "600", fontSize: 14 },
+  leftoverBadge: { backgroundColor: "#FBBF24", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  badge: { backgroundColor: "#2BA84A", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  badgeText: { fontSize: 10, color: "#fff" },
+  metaRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
+  meta: { fontSize: 12, color: "#64748B" },
+  actionsBar: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-around", padding: 12, backgroundColor: "#fff", borderTopWidth: 1, borderColor: "#CBD5E1" },
+  actionButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 12, alignItems: "center" },
+  actionLabel: { fontSize: 12 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 16 },
+  modalCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16 },
+  modalTitle: { fontSize: 18, fontWeight: "600", marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderColor: "#CBD5E1",
@@ -641,101 +573,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 10,
     fontSize: 14,
-    backgroundColor: "#F8FAFC",
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 6,
-  },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  outlineButton: {
-    backgroundColor: "#E2E8F0",
-  },
-  filledButton: {
-    backgroundColor: "#2BA84A",
-  },
-  modalButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-  sectionHeader: {
-    fontSize: 18,
-    fontWeight: "700",
+    backgroundColor: "#E5E7EB",
     color: "#0F172A",
-    marginBottom: 4,
   },
-  sectionSubtle: {
-    fontSize: 13,
-    color: "#64748B",
-    marginBottom: 8,
-  },
-  expiredCard: {
-    borderColor: "#FCA5A5",
-    backgroundColor: "#FEF2F2",
-  },
-  badge: {
-    backgroundColor: "#F87171",
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    color: "#FEF2F2",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  leftoverBadge: {
-    backgroundColor: "#F59E0B",
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-    color: "#333",
-  },  
-  binaryContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  
-  binaryOption: {
-    flex: 1,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 12,
-    marginHorizontal: 4,
-    alignItems: "center",
-    backgroundColor: "#f2f2f2",
-  },
-  
-  binaryOptionSelected: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#4CAF50",
-  },
-  
-  binaryOptionText: {
-    fontSize: 16,
-    color: "#444",
-    fontWeight: "500",
-  },
-  
-  binaryOptionTextSelected: {
-    color: "white",
-    fontWeight: "600",
-  },  
-  
+  label: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
+  binaryContainer: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  binaryOption: { paddingVertical: 6, paddingHorizontal: 12, borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 10 },
+  binaryOptionSelected: { backgroundColor: "#2BA84A", borderColor: "#2BA84A" },
+  binaryOptionText: { color: "#0F172A" },
+  binaryOptionTextSelected: { color: "#fff" },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", marginTop: 12, gap: 8 },
+  modalButton: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, minWidth: 80, alignItems: "center" },
+  filledButton: { backgroundColor: "#2BA84A" },
+  outlineButton: { backgroundColor: "#E2E8F0" },
+  modalButtonText: { color: "#fff", fontWeight: "600" },
 });

@@ -50,8 +50,11 @@ export default function TabLayout() {
             <LogoutButton />
           </View>
         ),
+        headerTitleAlign: "left",
+        headerTitleStyle: { flexShrink: 1 }, 
       }}
     >
+
       <Tabs.Screen
         name="inventory"
         options={{
