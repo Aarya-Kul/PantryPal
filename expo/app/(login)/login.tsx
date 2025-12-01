@@ -48,6 +48,7 @@ const LoginScreen: React.FC = () => {
       setError("Email and password are required.");
       return;
     }
+
     if (!emailRegex.test(trimmedEmail)) {
       setError("Please enter a valid email address.");
       return;
@@ -59,22 +60,30 @@ const LoginScreen: React.FC = () => {
       const accepted = await AsyncStorage.getItem(aiKey);
 
       if (accepted === "true") {
+        // Already accepted → normal login flow
         setSubmitting(true);
-        await login(trimmedEmail, password);
+        try {
+          await login(trimmedEmail, password);
+          // Protected layout handles navigation
+        } catch (e: any) {
+          setError(e?.message ?? "Login failed. Please try again.");
+        } finally {
+          setSubmitting(false);
+        }
         return;
       }
 
-      // 📌 FIRST TIME USER — show modal and STOP
+      // Not accepted yet → store credentials & show modal, do NOT touch submitting
       setPendingLogin({ email: trimmedEmail, password });
       setCurrentAiKey(aiKey);
       setShowAiModal(true);
-      return;  // <-- IMPORTANT
+      return;
     } catch (e) {
-      console.error("AI check failed:", e);
+      console.error("Error checking AI acceptance:", e);
       setError("Something went wrong checking AI acceptance. Please try again.");
+      return;
     }
   };
-
 
   const handleAcceptAi = async () => {
     // Defensive: if we somehow lost state, just close the modal
@@ -83,24 +92,25 @@ const LoginScreen: React.FC = () => {
       return;
     }
 
-    try {
-      await AsyncStorage.setItem(currentAiKey, "true");
-    } catch (e) {
-      // If persisting fails, we still allow login once
-    }
-
-    // Now actually perform the login for this user
-    setShowAiModal(false);
     setSubmitting(true);
     setError(null);
 
     try {
+      // Persist acceptance for this user
+      await AsyncStorage.setItem(currentAiKey, "true");
+      // Optional: ensure pending gets flushed before next getItem on some platforms
+      // @ts-expect-error: flushGetRequests may not exist on all platforms
+      await AsyncStorage.flushGetRequests?.();
+
+      // Now perform the login once
       await login(pendingLogin.email, pendingLogin.password);
       // Navigation handled by auth-protected layout
     } catch (e: any) {
+      console.error("Error during login after AI acceptance:", e);
       setError(e?.message ?? "Login failed. Please try again.");
     } finally {
       setSubmitting(false);
+      setShowAiModal(false);
       setPendingLogin(null);
     }
   };
@@ -152,6 +162,7 @@ const LoginScreen: React.FC = () => {
               submitting && { opacity: 0.7 },
             ]}
             onPress={handleSubmit}
+            disabled={submitting}
           >
             {submitting ? (
               <ActivityIndicator color="#fff" />
