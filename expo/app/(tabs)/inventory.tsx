@@ -1,13 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Modal,
   Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
+  ScrollView, StyleSheet, Text,
   TextInput,
   View
 } from "react-native";
@@ -17,21 +16,9 @@ import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "../../config/api";
 
 const ALLOWED_UNITS = [
-  "grams",
-  "kilograms",
-  "milligrams",
-  "ounces",
-  "pounds",
-  "milliliters",
-  "liters",
-  "teaspoons",
-  "tablespoons",
-  "fluid_ounces",
-  "cups",
-  "pints",
-  "quarts",
-  "gallons",
-  "units",
+  "grams", "kilograms", "milligrams", "ounces", "pounds",
+  "milliliters", "liters", "teaspoons", "tablespoons", "fluid_ounces",
+  "cups", "pints", "quarts", "gallons", "units"
 ];
 
 type InventoryItem = {
@@ -39,9 +26,9 @@ type InventoryItem = {
   quantity_value: number;
   quantity_unit: string;
   expiry_date: string;
-  // Backend returns nested item name under items(...)
   items?: { item_name: string };
   item_name?: string;
+  is_leftover: boolean;
 };
 
 type FormState = {
@@ -63,53 +50,39 @@ const emptyForm: FormState = {
 export default function InventoryScreen() {
   const { token } = useAuth();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLeftover, setIsLeftover] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Use composite key item_id+expiry_date so duplicate names/dates stay distinct.
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [mode, setMode] = useState<"add" | "edit">("add");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [unitMapping, setUnitMapping] = useState<{ item_name: string; unit: string }[]>([]);
 
-  // Today in YYYY-MM-DD for easy string comparison
-  const todayStr = useMemo(
-    () => new Date().toISOString().slice(0, 10),
-    []
-  );
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const selectedItem = useMemo(() => {
     if (!selectedKeys.length) return undefined;
     const key = selectedKeys[0];
-    return inventory.find(
-      (item) => `${item.item_id}-${item.expiry_date}` === key
-    );
+    return inventory.find((item) => `${item.item_id}-${item.expiry_date}` === key);
   }, [inventory, selectedKeys]);
 
-  // Helper: check if an item is expired
   const isItemExpired = (item?: InventoryItem) => {
     if (!item || !item.expiry_date) return false;
     return item.expiry_date < todayStr;
   };
 
-  // Partition inventory into expired vs active based on expiry_date < today
   const { expiredItems, activeItems } = useMemo(() => {
     const expired: InventoryItem[] = [];
     const active: InventoryItem[] = [];
-
     for (const item of inventory) {
-      if (item.expiry_date && item.expiry_date < todayStr) {
-        expired.push(item);
-      } else {
-        active.push(item);
-      }
+      if (item.expiry_date && item.expiry_date < todayStr) expired.push(item);
+      else active.push(item);
     }
-
     return { expiredItems: expired, activeItems: active };
   }, [inventory, todayStr]);
 
-  const friendlyName = (item: InventoryItem) =>
-    item.item_name || item.items?.item_name || "Unnamed";
+  const friendlyName = (item: InventoryItem) => item.item_name || item.items?.item_name || "Unnamed";
 
   const toggleSelect = (key: string) => {
     setSelectedKeys((prev) =>
@@ -119,13 +92,15 @@ export default function InventoryScreen() {
 
   const fetchUnitMapping = useCallback(async () => {
     if (!token) return;
-    const res = await fetch(`${API_BASE_URL}/api/get_inventory_unit_mapping`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setUnitMapping(data.mapping || []);
-    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/get_inventory_unit_mapping`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUnitMapping(data.mapping || []);
+      }
+    } catch {}
   }, [token]);
 
   const getUnitsForItem = (name: string) => {
@@ -144,6 +119,7 @@ export default function InventoryScreen() {
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const data = await res.json();
+      console.log("Fetched inventory:", data.inventory);
       setInventory(data.inventory || []);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Could not load inventory.");
@@ -152,32 +128,24 @@ export default function InventoryScreen() {
     }
   }, [token]);
 
-  useEffect(() => {
-    fetchInventory();
-    fetchUnitMapping();
-  }, [fetchInventory, fetchUnitMapping]);
+  // Auto-refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchInventory();
+      fetchUnitMapping();
+    }, [fetchInventory, fetchUnitMapping])
+  );
 
   const openAdd = () => {
     setMode("add");
     setForm(emptyForm);
+    setIsLeftover(false);
     setModalVisible(true);
   };
 
   const openEdit = () => {
-    if (!selectedItem) {
-      Alert.alert("Select an item", "Pick one item to edit.");
-      return;
-    }
-
-    // Block editing expired items
-    if (isItemExpired(selectedItem)) {
-      Alert.alert(
-        "Cannot edit expired items",
-        "Expired items can't be edited. You can remove them from your inventory instead."
-      );
-      return;
-    }
-
+    if (!selectedItem) return Alert.alert("Select an item", "Pick one item to edit.");
+    if (isItemExpired(selectedItem)) return Alert.alert("Cannot edit expired items");
     setMode("edit");
     setForm({
       item_name: friendlyName(selectedItem),
@@ -185,33 +153,21 @@ export default function InventoryScreen() {
       quantity_unit: selectedItem.quantity_unit ?? "",
       expiry_date: selectedItem.expiry_date ?? "",
     });
+    setIsLeftover(selectedItem.is_leftover ?? false);
     setModalVisible(true);
   };
 
   const handleRemove = async () => {
-    if (!token) {
-      Alert.alert("You are not logged in", "Pleae login before proceeding");
-      return;
-    }
-    if (!selectedKeys.length) {
-      Alert.alert("Select items", "Choose at least one item to remove.");
-      return;
-    }
+    if (!token) return Alert.alert("Login required");
+    if (!selectedKeys.length) return Alert.alert("Select items");
     try {
       setSaving(true);
       const items = inventory
         .filter((it) => selectedKeys.includes(`${it.item_id}-${it.expiry_date}`))
-        .map((it) => ({
-          item_id: it.item_id,
-          expiry_date: it.expiry_date,
-        }));
-
+        .map((it) => ({ item_id: it.item_id, expiry_date: it.expiry_date }));
       const res = await fetch(`${API_BASE_URL}/api/remove_inventory_item`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ items }),
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
@@ -225,58 +181,39 @@ export default function InventoryScreen() {
   };
 
   const submitForm = async () => {
-    if (!token) {
-      Alert.alert("You are not logged in", "Pleae login before proceeding");
-      return;
-    }
-    if (!form.item_name || !form.quantity_value || !form.quantity_unit || !form.expiry_date) {
-      Alert.alert("Missing info", "Please fill all fields.");
-      return;
-    }
+    if (!token) return Alert.alert("Login required");
+    if (!form.item_name || !form.quantity_value || !form.quantity_unit || !form.expiry_date)
+      return Alert.alert("Fill all fields");
     try {
       setSaving(true);
       if (mode === "add") {
         const res = await fetch(`${API_BASE_URL}/api/add_inventory_item`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            items: [
-              {
-                item_name: form.item_name.trim(),
-                quantity_value: Number(form.quantity_value),
-                quantity_unit: form.quantity_unit.trim(),
-                expiry_date: form.expiry_date.trim(),
-              },
-            ],
+            items: [{
+              ...form,
+              quantity_value: Number(form.quantity_value),
+              leftover: isLeftover ?? false,
+            }],            
           }),
         });
         if (!res.ok) throw new Error(`Failed (${res.status})`);
       } else if (mode === "edit" && selectedItem) {
-        // Note: we don't allow switching an item from expired to fresh via edit
-        // because openEdit blocks expired items from being edited.
         const res = await fetch(`${API_BASE_URL}/api/edit_inventory_item`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            items: [
-              {
-                item_id: selectedItem.item_id,
-                quantity_value: Number(form.quantity_value),
-                quantity_unit: form.quantity_unit.trim(),
-                expiry_date: form.expiry_date.trim(),
-              },
-            ],
+            items: [{
+              item_id: selectedItem.item_id,
+              quantity_value: Number(form.quantity_value),
+              quantity_unit: form.quantity_unit,
+              expiry_date: form.expiry_date,
+            }],
           }),
         });
         if (!res.ok) throw new Error(`Failed (${res.status})`);
       }
-
       await fetchInventory();
       await fetchUnitMapping();
       setModalVisible(false);
@@ -287,14 +224,6 @@ export default function InventoryScreen() {
       setSaving(false);
     }
   };
-
-  if (!token) {
-    return (
-      <View style={styles.lockedContainer}>
-        <Text style={styles.lockedText}>You must login to view inventory.</Text>
-      </View>
-    );
-  }
 
   const selectedIsExpired = selectedItem ? isItemExpired(selectedItem) : false;
 
@@ -338,9 +267,22 @@ export default function InventoryScreen() {
                     >
                       <View style={styles.cardHeader}>
                         <Text style={styles.itemName}>{friendlyName(item)}</Text>
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>Expired</Text>
+                        <View style={{ flexDirection: "row", gap: 4 }}>
+                          {item.is_leftover && (
+                            <View style={styles.leftoverBadge}>
+                              <Text style={styles.badgeText}>Leftover</Text>
+                            </View>
+                          )}
+                          {item.quantity_value === 0 && (
+                            <View style={[styles.badge, { backgroundColor: "#CBD5E1" }]}>
+                              <Text style={[styles.badgeText, { color: "#0F172A" }]}>None available</Text>
+                            </View>
+                          )}
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>Expired</Text>
+                          </View>
                         </View>
+
                       </View>
                       <View style={styles.metaRow}>
                         <Text style={styles.meta}>
@@ -381,9 +323,19 @@ export default function InventoryScreen() {
                     >
                       <View style={styles.cardHeader}>
                         <Text style={styles.itemName}>{friendlyName(item)}</Text>
-                        {isSelected && (
-                          <Ionicons name="checkmark-circle" size={20} color="#2BA84A" />
-                        )}
+                        <View style={{ flexDirection: "row", gap: 4, alignItems: "center" }}>
+                          {isSelected && <Ionicons name="checkmark-circle" size={20} color="#2BA84A" />}
+                          {item.is_leftover && (
+                            <View style={styles.leftoverBadge}>
+                              <Text style={styles.badgeText}>Leftover</Text>
+                            </View>
+                          )}
+                          {item.quantity_value === 0 && (
+                            <View style={[styles.badge, { backgroundColor: "#CBD5E1" }]}>
+                              <Text style={[styles.badgeText, { color: "#0F172A" }]}>None available</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
                       <View style={styles.metaRow}>
                         <Text style={styles.meta}>
@@ -476,6 +428,43 @@ export default function InventoryScreen() {
                 onChangeText={(v) => setForm((prev) => ({ ...prev, expiry_date: v }))}
               />
             )}
+            <Text style={styles.label}>Is this a leftover?</Text>
+
+            <View style={styles.binaryContainer}>
+              <Pressable
+                style={[
+                  styles.binaryOption,
+                  isLeftover === true && styles.binaryOptionSelected
+                ]}
+                onPress={() => setIsLeftover(true)}
+              >
+                <Text
+                  style={[
+                    styles.binaryOptionText,
+                    isLeftover === true && styles.binaryOptionTextSelected
+                  ]}
+                >
+                  Yes
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.binaryOption,
+                  isLeftover === false && styles.binaryOptionSelected
+                ]}
+                onPress={() => setIsLeftover(false)}
+              >
+                <Text
+                  style={[
+                    styles.binaryOptionText,
+                    isLeftover === false && styles.binaryOptionTextSelected
+                  ]}
+                >
+                  No
+                </Text>
+              </Pressable>
+            </View>
 
             <View style={styles.modalActions}>
               <Pressable
@@ -703,4 +692,50 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
+  leftoverBadge: {
+    backgroundColor: "#F59E0B",
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#333",
+  },  
+  binaryContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  
+  binaryOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 12,
+    marginHorizontal: 4,
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+  },
+  
+  binaryOptionSelected: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
+  },
+  
+  binaryOptionText: {
+    fontSize: 16,
+    color: "#444",
+    fontWeight: "500",
+  },
+  
+  binaryOptionTextSelected: {
+    color: "white",
+    fontWeight: "600",
+  },  
+  
 });

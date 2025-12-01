@@ -5,6 +5,7 @@ import logging
 from pantrypal.db.queries import (
     get_user_inventory,
     get_user_preferences,
+    get_leftovers,
     add_nutrition_info
 )
 from pantrypal.api.helpers import (
@@ -85,6 +86,7 @@ def get_recipes():
         inventory_summary = build_inventory_summary(inventory_rows)
 
         user_prefs = get_user_preferences(user_id)
+        leftovers = get_leftovers(user_id)
 
         logger.info("GOT ALL THE INFO I NEED FOR GEMINI")
 
@@ -109,6 +111,9 @@ def get_recipes():
 
             User preferences (JSON):
             {json.dumps(user_prefs)}
+
+            Leftover items (JSON):
+            {json.dumps(leftovers)}
 
             Generate 5 complete recipes that follow the instructions.
         """

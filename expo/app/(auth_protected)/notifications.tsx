@@ -8,7 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
@@ -31,6 +31,7 @@ const filters = [
   { label: "Today", key: "today" },
   { label: "This week", key: "week" },
   { label: "This month", key: "month" },
+  { label: "Expired", key: "expired" },
 ];
 
 export default function NotificationsScreen() {
@@ -62,24 +63,51 @@ export default function NotificationsScreen() {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // ---- GROUPING ----
   const grouped = useMemo(() => {
+    const today = data["today"] || [];
     const twoDay = data["2 days"] || [];
     const oneWeek = data["1 week"] || [];
+    const month = data["this_month"] || [];
+    const expired = data["expired"] || [];
+
     return [
-      { title: "Expires within 2 days", items: twoDay, tag: "Urgent" },
-      { title: "Expires within a week", items: oneWeek, tag: "Upcoming" },
+      { title: "Expires Today", items: today, tag: "Today", key: "today" },
+      { title: "Expires within 2 days", items: twoDay, tag: "Urgent", key: "2days" },
+      { title: "Expires within a week", items: oneWeek, tag: "Upcoming", key: "week" },
+      { title: "Expires this month", items: month, tag: "Later", key: "month" },
+      { title: "Expired items", items: expired, tag: "Expired", key: "expired" },
     ];
   }, [data]);
 
   const filteredGroups = useMemo(() => {
-    if (activeFilter === "today") {
-      return grouped.map((g) => ({ ...g, items: [] }));
+    switch (activeFilter) {
+      case "today":
+        return grouped.filter((g) => g.key === "today");
+  
+      case "week":
+        return grouped.filter(
+          (g) =>
+            g.key === "today" || g.key === "2days" || g.key === "week"
+        );
+  
+      case "month":
+        return grouped.filter(
+          (g) =>
+            g.key === "today" ||
+            g.key === "2days" ||
+            g.key === "week" ||
+            g.key === "month"
+        );
+  
+      case "expired":
+        return grouped.filter((g) => g.key === "expired");
+  
+      default:
+        return grouped;
     }
-    if (activeFilter === "month") {
-      return grouped;
-    }
-    return grouped;
   }, [activeFilter, grouped]);
+  
 
   if (!token) {
     return (
@@ -165,14 +193,20 @@ export default function NotificationsScreen() {
 
               {group.items.map((item) => (
                 <View
-                  key={`${group.title}-${item.item_id}-${item.expiry_date}`}
+                  key={`${group.key}-${item.item_id}-${item.expiry_date}`}
                   style={styles.card}
                 >
                   <View style={styles.cardRow}>
                     <Text style={styles.itemName}>
                       {item.items?.item_name || "Unnamed"}
                     </Text>
-                    <Text style={styles.badge}>Expires soon</Text>
+                    <Text style={styles.badge}>
+                      {group.key === "expired"
+                        ? "Expired"
+                        : group.key === "today"
+                        ? "Expires Today"
+                        : "Expires Soon"}
+                    </Text>
                   </View>
                   <Text style={styles.meta}>
                     Qty: {item.quantity_value} {item.quantity_unit}
@@ -230,6 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   refreshText: { color: "#0F172A", fontWeight: "600" },
+
   filterRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -245,6 +280,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   filterText: { color: "#334155", fontWeight: "600", fontSize: 13 },
+
   section: { marginTop: 12 },
   sectionHeader: {
     flexDirection: "row",
@@ -254,6 +290,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: "#0F172A" },
+
   tag: {
     backgroundColor: "#F5F3FF",
     borderRadius: 999,
@@ -261,6 +298,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   tagText: { color: "#6B21A8", fontWeight: "700", fontSize: 12 },
+
   card: {
     marginHorizontal: 16,
     marginBottom: 10,
@@ -291,7 +329,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   meta: { color: "#475569", fontSize: 13, marginBottom: 4 },
+
   empty: { paddingHorizontal: 16, color: "#94A3B8", fontSize: 13 },
+
   lockedContainer: {
     flex: 1,
     justifyContent: "center",
