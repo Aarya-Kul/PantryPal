@@ -1,10 +1,15 @@
-// components/header-buttons.tsx
+// components/notifications-button.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import {
+    Platform,
+    Pressable, StyleSheet,
+    Text,
+    View
+} from "react-native";
 import { headerButtonBase } from "./logout-button";
-import { useAuth } from "../context/AuthContext";
+
 
 const Tooltip: React.FC<{ text: string }> = ({ text }) => (
   <View style={styles.tooltip}>
@@ -12,19 +17,22 @@ const Tooltip: React.FC<{ text: string }> = ({ text }) => (
   </View>
 );
 
-export const PreferencesButton: React.FC = () => {
+export const NotificationsButton: React.FC = () => {
   const [hover, setHover] = useState(false);
 
   return (
     <View style={{ position: "relative" }}>
-      {hover && Platform.OS === "web" && <Tooltip text="Preferences" />}
+      {hover && Platform.OS === "web" && <Tooltip text="Notifications" />}
       <Pressable
-        onPress={() => router.push("/onboarding/preferences")}
+        onPress={() => router.push("/notifications")}
         onHoverIn={() => setHover(true)}
         onHoverOut={() => setHover(false)}
-        style={[headerButtonBase, Platform.OS === "web" ? { cursor: "pointer" } : {}]}
+        style={[
+          headerButtonBase,
+          Platform.OS === "web" ? { cursor: "pointer" } : {},
+        ]}
       >
-        <Ionicons name="settings-outline" size={16} color="#e5e7eb" />
+        <Ionicons name="notifications-outline" size={16} color="#e5e7eb" />
       </Pressable>
     </View>
   );
@@ -33,9 +41,9 @@ export const PreferencesButton: React.FC = () => {
 const styles = StyleSheet.create({
   tooltip: {
     position: "absolute",
-    top: 38, // button height (34) + small margin
+    top: 38,
     left: "50%",
-    transform: [{ translateX: -17 }], // half of button width
+    transform: [{ translateX: -30 }],
     backgroundColor: "#111",
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -45,10 +53,5 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: "#fff",
     fontSize: 10,
-  },
-  logoutText: {
-    color: "#e5e7eb",
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

@@ -1,15 +1,15 @@
 // app/(tabs)/_layout.tsx
-import { Redirect, Tabs } from "expo-router";
-import React from "react";
-import { ActivityIndicator, View } from "react-native";
-
 import { AiDisclaimerButton } from "@/components/ai-disclaimer-button";
 import { HapticTab } from "@/components/haptic-tab";
 import { LogoutButton } from "@/components/logout-button";
+import { NotificationsButton } from "@/components/notifications-button";
 import { PreferencesButton } from "@/components/preferences-button";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { Redirect, Tabs } from "expo-router";
+import React from "react";
+import { ActivityIndicator, View } from "react-native";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -44,6 +44,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerRight: () => (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <NotificationsButton />
             <AiDisclaimerButton />
             <PreferencesButton />
             <LogoutButton />
@@ -51,19 +52,6 @@ export default function TabLayout() {
         ),
       }}
     >
-{/* 
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: "Notifications",
-          tabBarIcon: ({ color }) => (
-            <HapticTab>
-              <IconSymbol size={28} name="bell" color={color} />
-            </HapticTab>
-          ),
-        }}
-      /> */}
-
       <Tabs.Screen
         name="inventory"
         options={{
