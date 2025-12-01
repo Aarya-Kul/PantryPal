@@ -3,10 +3,10 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
-  ScrollView,
 } from "react-native";
 
 import { HelloWave } from "@/components/hello-wave";
@@ -16,13 +16,19 @@ import { useAuth } from "@/context/AuthContext";
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 export default function HomeScreen() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
+
   const [stats, setStats] = useState<Record<string, number> | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
+
   const [expiringCount, setExpiringCount] = useState<number | null>(null);
   const [expiringLoading, setExpiringLoading] = useState(false);
   const [expiringError, setExpiringError] = useState<string | null>(null);
+
+  const [expiredCount, setExpiredCount] = useState<number | null>(null);
+  const [expiredLoading, setExpiredLoading] = useState(false);
+  const [expiredError, setExpiredError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -48,7 +54,6 @@ export default function HomeScreen() {
       }
     };
 
-    fetchStats();
     const fetchExpiring = async () => {
       if (!token) {
         setExpiringCount(null);
@@ -79,7 +84,42 @@ export default function HomeScreen() {
       }
     };
 
+    const fetchExpiredFromInventory = async () => {
+      if (!token) {
+        setExpiredCount(null);
+        return;
+      }
+      try {
+        setExpiredLoading(true);
+        const res = await fetch(`${API_BASE_URL}/api/get_user_inventory`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          throw new Error(`Failed (${res.status})`);
+        }
+        const data = await res.json();
+        const inventory = (data && data.inventory) || [];
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        const count = inventory.reduce((sum: number, item: any) => {
+          const expiry = item?.expiry_date as string | undefined;
+          if (expiry && expiry < todayStr) {
+            return sum + 1;
+          }
+          return sum;
+        }, 0);
+
+        setExpiredCount(count);
+      } catch (e: any) {
+        setExpiredError(e.message || "Error loading expired items");
+      } finally {
+        setExpiredLoading(false);
+      }
+    };
+
+    fetchStats();
     fetchExpiring();
+    fetchExpiredFromInventory();
   }, [token]);
 
   function pluralize(count: number, singular: string, plural: string) {
@@ -90,12 +130,51 @@ export default function HomeScreen() {
     <>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
-          {/* Link to notifications showing a compact nutrient summary */}
+          {/* Top section: welcome + notifications */}
           <View style={styles.stepContainer}>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>Welcome!</Text>
+              <Text style={styles.title}>
+                Welcome{user?.name ? `, ${user.name}` : ""}!
+              </Text>
               <HelloWave />
             </View>
+
+            {/* NEW: Expired items card (links to inventory) */}
+            {token &&
+              (expiredLoading ||
+                expiredError ||
+                (expiredCount !== null && expiredCount > 0)) && (
+                <Pressable
+                  onPress={() => router.push("/inventory")}
+                  style={({ pressed }) => [
+                    styles.expiredNotificationsRow,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  {expiredLoading ? (
+                    <ActivityIndicator color="#B91C1C" />
+                  ) : expiredError ? (
+                    <Text style={styles.itemName}>
+                      View expired items in your inventory
+                    </Text>
+                  ) : expiredCount !== null && expiredCount > 0 ? (
+                    <View style={styles.notificationsContent}>
+                      <Text style={styles.itemName}>
+                        You have {expiredCount} expired{" "}
+                        {pluralize(expiredCount, "item", "items")}
+                      </Text>
+                      <Text style={styles.subtle}>
+                        These items are past their expiry date. Do not eat
+                        them. Tap to open your inventory, safely discard them,
+                        and try generating recipes earlier next time to use
+                        similar items before they expire.
+                      </Text>
+                    </View>
+                  ) : null}
+                </Pressable>
+              )}
+
+            {/* EXISTING: Soon-to-expire card (unchanged, links to notifications) */}
             <Pressable
               onPress={() => router.push("/notifications")}
               style={({ pressed }) => [
@@ -110,10 +189,15 @@ export default function HomeScreen() {
               ) : expiringCount && expiringCount > 0 ? (
                 <View style={styles.notificationsContent}>
                   <Text style={styles.itemName}>
-                    You have {expiringCount} expired{" "}
+                    You have {expiringCount} soon expiring{" "}
                     {pluralize(expiringCount, "item", "items")}{" "}
                   </Text>
-                  <Text style={styles.subtle}>Tap to view details. Don&apos;t worry, these won&apos;t be used to curate recipes. Please remove these items from the inventory or add in a new item with an updated expiration date.</Text>
+                  <Text style={styles.subtle}>
+                    Tap to view details. Don&apos;t worry, these won&apos;t be
+                    used to curate recipes. Please remove these items from the
+                    inventory or add in a new item with an updated expiration
+                    date.
+                  </Text>
                 </View>
               ) : (
                 <View style={styles.notificationsContent}>
@@ -122,6 +206,8 @@ export default function HomeScreen() {
               )}
             </Pressable>
           </View>
+
+          {/* Nutrient breakdown section */}
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Nutrient Breakdown</Text>
 
@@ -157,7 +243,8 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          {/* Floating action button to snap a photo/receipt */}
+
+          {/* Hidden FAB spacer so scroll area feels natural */}
           <View>
             <Pressable
               onPress={() => router.push("/snap-photo")}
@@ -171,6 +258,8 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Real floating action button */}
       <View>
         <Pressable
           onPress={() => router.push("/snap-photo")}
@@ -202,12 +291,12 @@ const styles = StyleSheet.create({
     color: "#64748B",
   },
   container: {
+    flex: 1, // important so ScrollView gets full height and can scroll
     backgroundColor: "#F8FAFC",
-    color: "#0F172A",
   },
   content: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 160, // extra space so last stat row isn't under the FAB
   },
   titleContainer: {
     flexDirection: "row",
@@ -247,6 +336,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     shadowColor: "#0F172A",
     shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  expiredNotificationsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#FEF2F2", // matches inventory expiredCard background
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#FCA5A5", // matches inventory expiredCard border
+    padding: 14,
+    marginBottom: 6,
+    shadowColor: "#B91C1C",
+    shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },

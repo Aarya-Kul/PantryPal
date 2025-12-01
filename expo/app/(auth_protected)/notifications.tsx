@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
+import { router } from "expo-router";
 
 type ExpiringItem = {
   item_id: number;
@@ -91,6 +92,17 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.backRow}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.push("/")}
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={22} color="#0F172A" />
+          <Text style={styles.backText}>Home</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.header}>
         <Text style={styles.title}>Notifications</Text>
         <Pressable
@@ -125,7 +137,13 @@ export default function NotificationsScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchNotifications(); }} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchNotifications();
+            }}
+          />
         }
       >
         {loading && (
@@ -147,9 +165,14 @@ export default function NotificationsScreen() {
               )}
 
               {group.items.map((item) => (
-                <View key={`${group.title}-${item.item_id}-${item.expiry_date}`} style={styles.card}>
+                <View
+                  key={`${group.title}-${item.item_id}-${item.expiry_date}`}
+                  style={styles.card}
+                >
                   <View style={styles.cardRow}>
-                    <Text style={styles.itemName}>{item.items?.item_name || "Unnamed"}</Text>
+                    <Text style={styles.itemName}>
+                      {item.items?.item_name || "Unnamed"}
+                    </Text>
                     <Text style={styles.badge}>Expires soon</Text>
                   </View>
                   <Text style={styles.meta}>
@@ -168,13 +191,32 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { padding: 16, paddingBottom: 40 },
-  header: {
+
+  backRow: {
     paddingHorizontal: 16,
     paddingTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+
+  header: {
+    paddingHorizontal: 16,
     paddingBottom: 8,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 2,
   },
   title: { fontSize: 24, fontWeight: "700", color: "#0F172A" },
   refresh: {
