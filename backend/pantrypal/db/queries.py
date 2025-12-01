@@ -429,6 +429,14 @@ def get_expiring_items(user_id):
     notifications = {}
     today = date.today()
 
+    first_of_month = today.replace(day=1)
+    if today.month == 12:
+        next_month = today.replace(year=today.year + 1, month=1, day=1)
+    else:
+        next_month = today.replace(month=today.month + 1, day=1)
+
+    last_of_month = next_month - timedelta(days=1)
+
     def fetch_range(min_days, max_days):
         return (
             supabase_client.table("user_inventory")
@@ -440,7 +448,30 @@ def get_expiring_items(user_id):
             .execute().data
         )
 
+    def fetch_expired():
+        return (
+            supabase_client.table("user_inventory")
+            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
+            .eq("user_id", user_id)
+            .lt("expiry_date", (today))
+            .execute().data
+        )
+
+    def fetch_this_month():
+        return (
+            supabase_client.table("user_inventory")
+            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
+            .eq("user_id", user_id)
+            .gte("expiry_date", first_of_month.isoformat())
+            .lte("expiry_date", last_of_month.isoformat())
+            .order("expiry_date")
+            .execute().data
+        )
+
+    notifications["this_month"] = fetch_this_month()
     notifications["1 week"] = fetch_range(3, 7)
-    notifications["2 days"]  = fetch_range(1, 2)
+    notifications["2 days"] = fetch_range(1, 2)
+    notifications["today"] = fetch_range(0, 0)
+    notifications["expired"] = fetch_expired()
 
     return notifications
