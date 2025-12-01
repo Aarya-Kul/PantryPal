@@ -49,6 +49,7 @@ const API_BASE_URL = "http://127.0.0.1:8000";
 export default function InventoryScreen() {
   const { token } = useAuth();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [isLeftover, setIsLeftover] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -137,6 +138,7 @@ export default function InventoryScreen() {
   const openAdd = () => {
     setMode("add");
     setForm(emptyForm);
+    setIsLeftover(false);
     setModalVisible(true);
   };
 
@@ -150,6 +152,7 @@ export default function InventoryScreen() {
       quantity_unit: selectedItem.quantity_unit ?? "",
       expiry_date: selectedItem.expiry_date ?? "",
     });
+    setIsLeftover(selectedItem.is_leftover ?? false);
     setModalVisible(true);
   };
 
@@ -187,7 +190,11 @@ export default function InventoryScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            items: [{ ...form, quantity_value: Number(form.quantity_value) }],
+            items: [{
+              ...form,
+              quantity_value: Number(form.quantity_value),
+              leftover: isLeftover ?? false,
+            }],            
           }),
         });
         if (!res.ok) throw new Error(`Failed (${res.status})`);
@@ -410,6 +417,43 @@ export default function InventoryScreen() {
                 onChangeText={(v) => setForm((prev) => ({ ...prev, expiry_date: v }))}
               />
             )}
+            <Text style={styles.label}>Is this a leftover?</Text>
+
+            <View style={styles.binaryContainer}>
+              <Pressable
+                style={[
+                  styles.binaryOption,
+                  isLeftover === true && styles.binaryOptionSelected
+                ]}
+                onPress={() => setIsLeftover(true)}
+              >
+                <Text
+                  style={[
+                    styles.binaryOptionText,
+                    isLeftover === true && styles.binaryOptionTextSelected
+                  ]}
+                >
+                  Yes
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.binaryOption,
+                  isLeftover === false && styles.binaryOptionSelected
+                ]}
+                onPress={() => setIsLeftover(false)}
+              >
+                <Text
+                  style={[
+                    styles.binaryOptionText,
+                    isLeftover === false && styles.binaryOptionTextSelected
+                  ]}
+                >
+                  No
+                </Text>
+              </Pressable>
+            </View>
 
             <View style={styles.modalActions}>
               <Pressable
@@ -643,5 +687,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#333",
+  },  
+  binaryContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  
+  binaryOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 12,
+    marginHorizontal: 4,
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+  },
+  
+  binaryOptionSelected: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
+  },
+  
+  binaryOptionText: {
+    fontSize: 16,
+    color: "#444",
+    fontWeight: "500",
+  },
+  
+  binaryOptionTextSelected: {
+    color: "white",
+    fontWeight: "600",
+  },  
   
 });

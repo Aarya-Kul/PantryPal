@@ -2,20 +2,14 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
+  ActivityIndicator, Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  View
+  Text, View
 } from "react-native";
 
 import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
-import RNPickerSelect from "react-native-picker-select";
 
 // Use localhost for web; change to your LAN IP if testing on device.
 const API_BASE_URL = "http://127.0.0.1:8000";
@@ -258,7 +252,7 @@ export default function HomeScreen() {
           <Text style={styles.fabText}>+</Text>
         </Pressable>
 
-        <Pressable
+        {/* <Pressable
           onPress={() => setLeftoverModalVisible(true)}
           style={({ pressed }) => [
             {
@@ -272,11 +266,11 @@ export default function HomeScreen() {
           ]}
         >
           <Text style={styles.fabText}>L</Text>
-        </Pressable>
+        </Pressable> */}
       </View>
 
       {/* Leftover Modal */}
-      <Modal
+      {/* <Modal
         transparent
         animationType="slide"
         visible={leftoverModalVisible}
@@ -388,7 +382,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
     </>
   );
 }
