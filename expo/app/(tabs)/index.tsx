@@ -2,62 +2,33 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  ActivityIndicator, Pressable,
+  ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
-  Text, View
+  Text,
+  View
 } from "react-native";
 
 import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
 
-// Use localhost for web; change to your LAN IP if testing on device.
 const API_BASE_URL = "http://127.0.0.1:8000";
-
-const ALLOWED_UNITS = [
-  "grams",
-  "kilograms",
-  "milligrams",
-  "ounces",
-  "pounds",
-  "milliliters",
-  "liters",
-  "teaspoons",
-  "tablespoons",
-  "fluid_ounces",
-  "cups",
-  "pints",
-  "quarts",
-  "gallons",
-  "units",
-];
 
 export default function HomeScreen() {
   const { token, user } = useAuth();
 
   // --- State ---
-  const [stats, setStats] = useState<Record<string, number> | null>(null);
+  const [stats, setStats] = useState<Record<string, { value: number; goal: number | null }> | null>(null);
   const [expiredCount, setExpiredCount] = useState<number | null>(null);
   const [expiringCount, setExpiringCount] = useState<number | null>(null);
-
   const [expiredLoading, setExpiredLoading] = useState(false);
   const [expiredError, setExpiredError] = useState(false);
   const [expiringLoading, setExpiringLoading] = useState(false);
   const [expiringError, setExpiringError] = useState(false);
-
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
 
-  const [leftoverModalVisible, setLeftoverModalVisible] = useState(false);
-  const [leftoverForm, setLeftoverForm] = useState({
-    item_name: "",
-    quantity_value: "",
-    quantity_unit: "",
-    expiry_date: "",
-  });
-  const [leftoverSaving, setLeftoverSaving] = useState(false);
-
-  // --- Helper functions ---
   function pluralize(count: number, singular: string, plural: string) {
     return count === 1 ? singular : plural;
   }
@@ -71,7 +42,6 @@ export default function HomeScreen() {
     setExpiringLoading(true);
 
     try {
-      // Fetch nutrient stats
       const resStats = await fetch(`${API_BASE_URL}/api/get_nutrient_statistics`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -79,7 +49,6 @@ export default function HomeScreen() {
       const statsData = await resStats.json();
       setStats(statsData);
 
-      // Fetch inventory for expired items
       const resInv = await fetch(`${API_BASE_URL}/api/get_user_inventory`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -88,7 +57,6 @@ export default function HomeScreen() {
       const todayStr = new Date().toISOString().slice(0, 10);
       setExpiredCount(inv.filter((i: any) => i.expiry_date < todayStr).length);
 
-      // Fetch expiring items
       const resExp = await fetch(`${API_BASE_URL}/api/get_expiring_items`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -111,7 +79,6 @@ export default function HomeScreen() {
     }
   }, [token]);
 
-  // Refresh on screen focus
   useFocusEffect(
     useCallback(() => {
       refreshStats();
@@ -120,139 +87,140 @@ export default function HomeScreen() {
 
   // --- Render ---
   return (
-    <>
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Welcome + notifications */}
-          <View style={styles.stepContainer}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>
-                Welcome{user?.name ? `, ${user.name}` : ""}!
-              </Text>
-              <HelloWave />
-            </View>
-
-            {/* Expired items card */}
-            {token &&
-              (expiredLoading ||
-                expiredError ||
-                (expiredCount !== null && expiredCount > 0)) && (
-                <Pressable
-                  onPress={() => router.push("/inventory")}
-                  style={({ pressed }) => [
-                    styles.expiredNotificationsRow,
-                    pressed && { opacity: 0.85 },
-                  ]}
-                >
-                  {expiredLoading ? (
-                    <ActivityIndicator color="#B91C1C" />
-                  ) : expiredError ? (
-                    <Text style={styles.itemName}>
-                      View expired items in your inventory
-                    </Text>
-                  ) : expiredCount !== null && expiredCount > 0 ? (
-                    <View style={styles.notificationsContent}>
-                      <Text style={styles.itemName}>
-                        You have {expiredCount} expired{" "}
-                        {pluralize(expiredCount, "item", "items")}
-                      </Text>
-                      <Text style={styles.subtle}>
-                        These items are past their expiry date. Do not eat them. Tap to open your
-                        inventory, safely discard them, and try generating recipes earlier next
-                        time.
-                      </Text>
-                    </View>
-                  ) : null}
-                </Pressable>
-              )}
-
-            {/* Soon-to-expire card */}
-            <Pressable
-              onPress={() => router.push("/notifications")}
-              style={({ pressed }) => [
-                styles.notificationsRow,
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              {expiringLoading ? (
-                <ActivityIndicator color="#2BA84A" />
-              ) : expiringError ? (
-                <Text style={styles.itemName}>View notifications</Text>
-              ) : expiringCount && expiringCount > 0 ? (
-                <View style={styles.notificationsContent}>
-                  <Text style={styles.itemName}>
-                    You have {expiringCount} soon expiring{" "}
-                    {pluralize(expiringCount, "item", "items")}
-                  </Text>
-                  <Text style={styles.subtle}>
-                    Tap to view details. Please remove or update these items in the inventory.
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.notificationsContent}>
-                  <Text style={styles.itemName}>You have no expired items</Text>
-                </View>
-              )}
-            </Pressable>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Welcome + notifications */}
+        <View style={styles.stepContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>
+              Welcome{user?.name ? `, ${user.name}` : ""}!
+            </Text>
+            <HelloWave />
           </View>
 
-          {/* Nutrient breakdown */}
-          <View style={styles.stepContainer}>
-            <Text style={styles.title}>Nutrient Breakdown</Text>
-            {!token ? (
-              <Text>Login to view your nutrient statistics.</Text>
-            ) : statsLoading ? (
-              <ActivityIndicator size="large" color="#2BA84A" style={{ marginTop: 40 }} />
-            ) : statsError ? (
-              <Text>{statsError}</Text>
-            ) : !stats || Object.keys(stats).length === 0 ? (
-              <Text>
-                No nutrition data available for today. Generate a recipe to get some!
-              </Text>
-            ) : (
-              <View style={styles.statsContainer}>
-                {Object.entries(stats).map(([key, value]) => (
-                  <View style={styles.statRow} key={key}>
-                    <Text style={styles.itemName}>{key}</Text>
-                    {value < 1 ? (
-                      <Text style={styles.subtle}>{Math.round(value * 100)}%</Text>
-                    ) : (
-                      <Text style={styles.subtle}>{value}g</Text>
-                    )}
+          {/* Expired items card */}
+          {token &&
+            (expiredLoading ||
+              expiredError ||
+              (expiredCount !== null && expiredCount > 0)) && (
+              <Pressable
+                onPress={() => router.push("/inventory")}
+                style={({ pressed }) => [
+                  styles.expiredNotificationsRow,
+                  pressed && { opacity: 0.85 },
+                ]}
+              >
+                {expiredLoading ? (
+                  <ActivityIndicator color="#B91C1C" />
+                ) : expiredError ? (
+                  <Text style={styles.itemName}>
+                    View expired items in your inventory
+                  </Text>
+                ) : expiredCount !== null && expiredCount > 0 ? (
+                  <View style={styles.notificationsContent}>
+                    <Text style={styles.itemName}>
+                      You have {expiredCount} expired{" "}
+                      {pluralize(expiredCount, "item", "items")}
+                    </Text>
+                    <Text style={styles.subtle}>
+                      These items are past their expiry date. Do not eat them. Tap
+                      to open your inventory, safely discard them, and try generating
+                      recipes earlier next time.
+                    </Text>
                   </View>
-                ))}
+                ) : null}
+              </Pressable>
+            )}
+
+          {/* Soon-to-expire card */}
+          <Pressable
+            onPress={() => router.push("/notifications")}
+            style={({ pressed }) => [
+              styles.notificationsRow,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            {expiringLoading ? (
+              <ActivityIndicator color="#2BA84A" />
+            ) : expiringError ? (
+              <Text style={styles.itemName}>View notifications</Text>
+            ) : expiringCount && expiringCount > 0 ? (
+              <View style={styles.notificationsContent}>
+                <Text style={styles.itemName}>
+                  You have {expiringCount} soon expiring{" "}
+                  {pluralize(expiringCount, "item", "items")}
+                </Text>
+                <Text style={styles.subtle}>
+                  Tap to view details. Please remove or update these items in the inventory.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.notificationsContent}>
+                <Text style={styles.itemName}>You have no expired items</Text>
               </View>
             )}
-          </View>
+          </Pressable>
+        </View>
 
-          {/* Hidden FAB spacer */}
-          <View>
-            <Pressable
-              onPress={() => router.push("/snap-photo")}
-              style={({ pressed }) => [
-                styles.fabHidden,
-                pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-              ]}
-            >
-              <Text style={styles.fabText}>+</Text>
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
+        {/* Nutrient breakdown */}
+        <View style={styles.stepContainer}>
+          <Text style={styles.title}>Nutrient Breakdown</Text>
+          {!token ? (
+            <Text>Login to view your nutrient statistics.</Text>
+          ) : statsLoading ? (
+            <ActivityIndicator size="large" color="#2BA84A" style={{ marginTop: 40 }} />
+          ) : statsError ? (
+            <Text>{statsError}</Text>
+          ) : !stats || Object.keys(stats).length === 0 ? (
+            <Text>No nutrition data available for today. Generate a recipe to get some!</Text>
+          ) : (
+            <View style={styles.statsContainer}>
+              {Object.entries(stats || {}).map(([key, data]) => {
+                const goal = data.goal;
+                const value = data.value;
 
-      {/* FABs */}
-      <View>
-        <Pressable
-          onPress={() => router.push("/snap-photo")}
-          style={({ pressed }) => [
-            styles.fab,
-            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-          ]}
-        >
-          <Text style={styles.fabText}>+</Text>
-        </Pressable>
-      </View>
-    </>
+                const displayText =
+                  goal == null
+                    ? `Your accumulated total is ${value} grams.`
+                    : `You are at ${Math.round((value) * 100)}% of your daily goal of ${goal} grams.`;
+
+                return (
+                  <View style={styles.statRow} key={key}>
+                    <Text style={styles.itemName}>{key}</Text>
+                    <Text style={styles.subtle}>{displayText}</Text>
+                  </View>
+                );
+              })}
+
+            </View>
+          )}
+        </View>
+
+        {/* Hidden FAB spacer */}
+        <View>
+          <Pressable
+            onPress={() => router.push("/snap-photo")}
+            style={({ pressed }) => [
+              styles.fabHidden,
+              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+            ]}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* FAB */}
+      <Pressable
+        onPress={() => router.push("/snap-photo")}
+        style={({ pressed }) => [
+          styles.fab,
+          pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+        ]}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -338,51 +306,4 @@ const styles = StyleSheet.create({
     bottom: 30,
   },
   fabText: { color: "#fff", fontSize: 36 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  modalCard: {
-    backgroundColor: "#fff",
-    width: "100%",
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: "#0F172A" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
-    fontSize: 14,
-    backgroundColor: "#F8FAFC",
-  },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 6 },
-  modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  outlineButton: {
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    backgroundColor: "#fff",
-  },
-  filledButton: {
-    backgroundColor: "#2BA84A",
-  },
-  modalButtonText: {
-    fontWeight: "600",
-    fontSize: 14,
-    color: "#fff",
-  },
 });
