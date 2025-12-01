@@ -1,4 +1,3 @@
-// app/recipe.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React from "react";
@@ -71,7 +70,7 @@ const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
 const RecipeDetailScreen: React.FC = () => {
   const params = useLocalSearchParams();
   const [loading, setLoading] = React.useState(false);
-  const { token } = useAuth(); // <<< we use auth context
+  const { token } = useAuth();
   const raw = params.recipe as string | undefined;
 
   if (!raw) {
@@ -101,9 +100,6 @@ const RecipeDetailScreen: React.FC = () => {
 
     setLoading(true);
   
-    console.log("Cooking recipe:", recipe.name);
-    console.log("Ingredients to deduct:", recipe.ingredients);
-  
     try {
       const nutrition_response = await fetch(`${API_BASE_URL}/api/add_recipe_nutrition`, {
         method: "POST",
@@ -119,10 +115,7 @@ const RecipeDetailScreen: React.FC = () => {
         throw new Error(err.error || "Failed to add nutrition info");
       }
   
-      const nutrition_data = await nutrition_response.json();
-      console.log("nutrition data", nutrition_data)
-
-      const response = await fetch(`${API_BASE_URL}/api/deduct_inventory_item`, {
+      await fetch(`${API_BASE_URL}/api/deduct_inventory_item`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -138,13 +131,6 @@ const RecipeDetailScreen: React.FC = () => {
         }),
       });
   
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || "Failed to deduct inventory items");
-      }
-  
-      const data = await response.json();
-      console.log("Deducted items:", data);
       alert(`Successfully cooked ${recipe.name}! Inventory updated.`);
       router.push("/");
     } catch (err: any) {
@@ -160,7 +146,7 @@ const RecipeDetailScreen: React.FC = () => {
     <SafeAreaView style={styles.outerContainer}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: 120 }]} // space for floating button
+        contentContainerStyle={[styles.content, { paddingBottom: 120 }]}
       >
         {/* Header */}
         <View style={styles.headerRow}>
@@ -179,8 +165,10 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Match + description */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{recipe.name}</Text>
-            <Text style={styles.matchText}>
+            <Text style={styles.cardTitle} numberOfLines={2}>
+              {recipe.name}
+            </Text>
+            <Text style={styles.matchText} numberOfLines={1}>
               {recipe.preference_match_percent ?? 0}% match
             </Text>
           </View>
@@ -266,19 +254,21 @@ const RecipeDetailScreen: React.FC = () => {
 
       {/* Floating Cook Button */}
       <View style={styles.buttonWrapper}>
-      <Pressable
-        style={({ pressed }) => [
-          styles.cookButton,
-          pressed && { opacity: 0.8 },
-          loading && { opacity: 0.5 },
-        ]}
-        onPress={handleCookRecipe}
-        disabled={loading}
-      >
-        <Text style={styles.cookButtonText}>
-          {loading ? "Cooking recipe and deducting ingredients from inventory..." : "Cook recipe and deduct ingredients from inventory"}
-        </Text>
-      </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.cookButton,
+            pressed && { opacity: 0.8 },
+            loading && { opacity: 0.5 },
+          ]}
+          onPress={handleCookRecipe}
+          disabled={loading}
+        >
+          <Text style={styles.cookButtonText}>
+            {loading
+              ? "Cooking recipe and deducting ingredients from inventory..."
+              : "Cook recipe and deduct ingredients from inventory"}
+          </Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -320,9 +310,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
+    flexWrap: "wrap",
   },
 
-  cardTitle: { fontSize: 18, fontWeight: "600", color: "#fff" },
+  cardTitle: { fontSize: 18, fontWeight: "600", color: "#fff", flex: 1, flexShrink: 1 },
   sectionLabel: {
     marginBottom: 6,
     fontSize: 12,
@@ -368,8 +359,10 @@ const styles = StyleSheet.create({
   cookButton: {
     backgroundColor: "#16A34A",
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 999,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -380,5 +373,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
+    flexShrink: 1,
   },
 });

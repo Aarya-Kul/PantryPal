@@ -20,7 +20,9 @@ export default function HomeScreen() {
   const { token } = useAuth();
 
   // --- State ---
-  const [stats, setStats] = useState<Record<string, { value: number; goal: number | null }> | null>(null);
+  const [stats, setStats] = useState<
+    Record<string, { value: number; goal: number | null }> | null
+  >(null);
   const [expiredCount, setExpiredCount] = useState<number | null>(null);
   const [expiringCount, setExpiringCount] = useState<number | null>(null);
   const [expiredLoading, setExpiredLoading] = useState(false);
@@ -93,17 +95,13 @@ export default function HomeScreen() {
         {/* Top section: welcome + notifications */}
         <View style={styles.stepContainer}>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>
-              Welcome!
-            </Text>
+            <Text style={styles.title}>Welcome!</Text>
             <HelloWave />
           </View>
 
           {/* Expired items card */}
           {token &&
-            (expiredLoading ||
-              expiredError ||
-              (expiredCount !== null && expiredCount > 0)) && (
+            (expiredLoading || expiredError || (expiredCount !== null && expiredCount > 0)) && (
               <Pressable
                 onPress={() => router.push("/inventory")}
                 style={({ pressed }) => [
@@ -120,13 +118,10 @@ export default function HomeScreen() {
                 ) : expiredCount !== null && expiredCount > 0 ? (
                   <View style={styles.notificationsContent}>
                     <Text style={styles.itemName}>
-                      You have {expiredCount} expired{" "}
-                      {pluralize(expiredCount, "item", "items")}
+                      You have {expiredCount} expired {pluralize(expiredCount, "item", "items")}
                     </Text>
                     <Text style={styles.subtle}>
-                      These items are past their expiry date. Do not eat them. Tap
-                      to open your inventory, safely discard them, and try generating
-                      recipes earlier next time.
+                      These items are past their expiry date. Do not eat them. Tap to open your inventory, safely discard them, and try generating recipes earlier next time.
                     </Text>
                   </View>
                 ) : null}
@@ -148,8 +143,7 @@ export default function HomeScreen() {
             ) : expiringCount && expiringCount > 0 ? (
               <View style={styles.notificationsContent}>
                 <Text style={styles.itemName}>
-                  You have {expiringCount} soon expiring{" "}
-                  {pluralize(expiringCount, "item", "items")}
+                  You have {expiringCount} soon expiring {pluralize(expiringCount, "item", "items")}
                 </Text>
                 <Text style={styles.subtle}>
                   Tap to view details. Please remove or update these items in the inventory.
@@ -179,11 +173,10 @@ export default function HomeScreen() {
               {Object.entries(stats || {}).map(([key, data]) => {
                 const goal = data.goal;
                 const value = data.value;
-
                 const displayText =
                   goal == null
                     ? `Your accumulated total is ${value} grams.`
-                    : `You are at ${Math.round((value) * 100)}% of your daily goal of ${goal} grams.`;
+                    : `You are at ${Math.round(value * 100)}% of your daily goal of ${goal} grams.`;
 
                 return (
                   <View style={styles.statRow} key={key}>
@@ -226,17 +219,29 @@ export default function HomeScreen() {
 
 // --- Styles ---
 const styles = StyleSheet.create({
-  title: { fontSize: 24, fontWeight: "700", color: "#0F172A" },
-  itemName: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
-  subtle: { fontSize: 14, color: "#64748B" },
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { padding: 16, paddingBottom: 160 },
-  titleContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
   stepContainer: { gap: 8, marginBottom: 8 },
+
+  // --- Title + wave ---
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    justifyContent: "flex-start",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    flexShrink: 1, // allow wrapping on narrow screens
+  },
+
+  // --- Stats cards ---
   statsContainer: { marginTop: 6, gap: 8 },
   statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: "column", // vertical layout for mobile wrap
     backgroundColor: "#fff",
     borderRadius: 14,
     borderWidth: 1,
@@ -248,6 +253,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },
+
+  // --- Notifications cards ---
   notificationsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -277,6 +284,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
   notificationsContent: { gap: 6 },
+
+  // --- FAB ---
   fabHidden: {
     opacity: 0,
     width: 60,
@@ -293,6 +302,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 30,
+    bottom: 30,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -303,7 +313,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    bottom: 30,
   },
   fabText: { color: "#fff", fontSize: 36 },
+
+  // --- Text ---
+  itemName: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
+  subtle: { fontSize: 14, color: "#64748B" },
 });

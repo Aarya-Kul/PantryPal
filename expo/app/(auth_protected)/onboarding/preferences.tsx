@@ -139,6 +139,7 @@ export default function PreferencesScreen() {
               const active = selected.macronutrients.includes(item.name);
               return (
                 <View key={item.id} style={styles.macroRow}>
+                  {/* Chip */}
                   <Pressable
                     style={({ pressed }) => [
                       styles.chip,
@@ -150,6 +151,7 @@ export default function PreferencesScreen() {
                     <Text style={styles.chipText}>{item.name}</Text>
                   </Pressable>
 
+                  {/* Goal input */}
                   {active && (
                     <View style={styles.goalContainer}>
                       <Text style={styles.goalLabel}>Enter your daily goal (in grams):</Text>
@@ -205,9 +207,15 @@ const styles = StyleSheet.create({
   card: { marginBottom: 16, padding: 12, backgroundColor: "#111122", borderRadius: 12 },
   categoryTitle: { color: "#a5b4fc", marginBottom: 12, fontSize: 16, fontWeight: "600" },
   chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  macroRow: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 },
+
+  // Updated macro row for responsive mobile layout
+  macroRow: { 
+    flexDirection: "column", // stack chip and input vertically
+    marginBottom: 16,
+    gap: 8,
+  },
   chip: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
@@ -219,8 +227,18 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: "#4f46e5" },
   chipText: { color: "#fff", textAlign: "center" },
-  goalContainer: { flexDirection: "row", alignItems: "center", gap: 6 },
-  goalLabel: { color: "#fff", fontSize: 14, flexShrink: 1 },
+
+  goalContainer: { 
+    flexDirection: "row", 
+    flexWrap: "wrap", // allow text to wrap
+    alignItems: "center", 
+    gap: 6,
+  },
+  goalLabel: { 
+    color: "#fff", 
+    fontSize: 14, 
+    flexShrink: 1, // wrap text instead of overflowing
+  },
   goalInput: {
     paddingVertical: 6,
     paddingHorizontal: 12,
@@ -230,7 +248,9 @@ const styles = StyleSheet.create({
     color: "white",
     width: 80,
     textAlign: "center",
+    flexShrink: 1, // shrink on small screens
   },
+
   saveButton: { backgroundColor: "#4f46e5", paddingVertical: 12, borderRadius: 10, marginTop: 20, alignItems: "center" },
   saveText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

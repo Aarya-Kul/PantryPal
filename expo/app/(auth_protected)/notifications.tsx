@@ -10,6 +10,7 @@ import {
   Text,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
@@ -63,7 +64,6 @@ export default function NotificationsScreen() {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // ---- GROUPING ----
   const grouped = useMemo(() => {
     const today = data["today"] || [];
     const twoDay = data["2 days"] || [];
@@ -84,30 +84,18 @@ export default function NotificationsScreen() {
     switch (activeFilter) {
       case "today":
         return grouped.filter((g) => g.key === "today");
-  
       case "week":
-        return grouped.filter(
-          (g) =>
-            g.key === "today" || g.key === "2days" || g.key === "week"
-        );
-  
+        return grouped.filter((g) => g.key === "today" || g.key === "2days" || g.key === "week");
       case "month":
-        return grouped.filter(
-          (g) =>
-            g.key === "today" ||
-            g.key === "2days" ||
-            g.key === "week" ||
-            g.key === "month"
+        return grouped.filter((g) =>
+          g.key === "today" || g.key === "2days" || g.key === "week" || g.key === "month"
         );
-  
       case "expired":
         return grouped.filter((g) => g.key === "expired");
-  
       default:
         return grouped;
     }
   }, [activeFilter, grouped]);
-  
 
   if (!token) {
     return (
@@ -118,27 +106,19 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.backRow}>
-        <Pressable
-          style={styles.backButton}
+    <SafeAreaView style={styles.container}>
+      {/* Header Row with back button like recipe.tsx */}
+      <View style={styles.headerRow}>
+        <Ionicons
+          name="chevron-back"
+          size={24}
+          color="#0F172A"
           onPress={() => router.push("/")}
-          hitSlop={10}
-        >
-          <Ionicons name="chevron-back" size={22} color="#0F172A" />
-          <Text style={styles.backText}>Home</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.header}>
-        <Text style={styles.title}>Notifications</Text>
-        <Pressable
-          onPress={() => fetchNotifications()}
-          style={({ pressed }) => [styles.refresh, pressed && { opacity: 0.7 }]}
-        >
-          <Ionicons name="refresh" size={18} color="#0F172A" />
-          <Text style={styles.refreshText}>Refresh</Text>
-        </Pressable>
+        />
+        <Text style={styles.screenTitle} numberOfLines={1}>
+          Notifications
+        </Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.filterRow}>
@@ -217,7 +197,7 @@ export default function NotificationsScreen() {
             </View>
           ))}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -225,45 +205,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { padding: 16, paddingBottom: 40 },
 
-  backRow: {
+  // Updated back button header like recipe.tsx
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
     paddingHorizontal: 16,
     paddingTop: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
+    gap: 8,
   },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  backText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 2,
-  },
-  title: { fontSize: 24, fontWeight: "700", color: "#0F172A" },
-  refresh: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    backgroundColor: "#fff",
-  },
-  refreshText: { color: "#0F172A", fontWeight: "600" },
+  screenTitle: { flex: 1, fontSize: 20, fontWeight: "600", color: "#0F172A" },
 
   filterRow: {
     flexDirection: "row",

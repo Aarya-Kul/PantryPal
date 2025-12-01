@@ -36,6 +36,9 @@ def upload_receipt():
 
     text = scan_receipts(image_data)
     logger.info("OCR text:\n%s", text)
+    logger.info("Inventory unit map: %s", json.dumps(get_inventory_unit_mapping(user_id)))
+    logger.info("Allowed units: %s", json.dumps(ALLOWED_UNITS))
+
 
     prompt = f"""
         Today's date is {datetime.now().date()}
