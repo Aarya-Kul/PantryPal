@@ -11,9 +11,8 @@ import {
   Text,
   View
 } from "react-native";
+import { API_BASE_URL } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
-
-const API_BASE_URL = "http://127.0.0.1:8000"; // change if needed
 
 type Ingredient = {
   item_id: number;

@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
+import { API_BASE_URL } from "../../config/api";
 
 type ExpiringItem = {
   item_id: number;
@@ -25,8 +26,6 @@ type ExpiringItem = {
 type NotificationResponse = {
   [key: string]: ExpiringItem[];
 };
-
-const API_BASE_URL = "http://127.0.0.1:8000";
 
 const filters = [
   { label: "Today", key: "today" },

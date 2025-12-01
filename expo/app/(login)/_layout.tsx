@@ -2,6 +2,7 @@
 import { Redirect, Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { API_BASE_URL } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 
 type PrefStatus = "idle" | "checking" | "needsOnboarding" | "ready";
@@ -20,7 +21,7 @@ export default function ProtectedLayout() {
     const checkPrefs = async () => {
       setPrefStatus("checking");
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/get_preferences", {
+        const res = await fetch(`${API_BASE_URL}/api/get_preferences`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,

@@ -11,12 +11,12 @@ import {
 
 import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "../../config/api";
 
 // Use localhost for web; change to your LAN IP if testing on device.
-const API_BASE_URL = "http://127.0.0.1:8000";
 
 export default function HomeScreen() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   const [stats, setStats] = useState<Record<string, number> | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -134,7 +134,7 @@ export default function HomeScreen() {
           <View style={styles.stepContainer}>
             <View style={styles.titleContainer}>
               <Text style={styles.title}>
-                Welcome{user?.name ? `, ${user.name}` : ""}!
+                Welcome!
               </Text>
               <HelloWave />
             </View>
