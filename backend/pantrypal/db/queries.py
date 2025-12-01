@@ -479,7 +479,8 @@ def get_nutrient_statistics(user_id, reference_date=None):
 
     return result
 
-# get expiring items
+from datetime import date, timedelta
+
 def get_expiring_items(user_id):
     notifications = {}
     today = date.today()
@@ -492,41 +493,44 @@ def get_expiring_items(user_id):
 
     last_of_month = next_month - timedelta(days=1)
 
-    def fetch_range(min_days, max_days):
-        return (
-            supabase_client.table("user_inventory")
-            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
-            .eq("user_id", user_id)
-            .gte("expiry_date", (today + timedelta(days=min_days)).isoformat())
-            .lte("expiry_date", (today + timedelta(days=max_days)).isoformat())
-            .order("expiry_date")
-            .execute().data
-        )
+    # Fetch all items that expire from today onwards
+    all_items = (
+        supabase_client.table("user_inventory")
+        .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
+        .eq("user_id", user_id)
+        .gte("expiry_date", today.isoformat())
+        .order("expiry_date")
+        .execute().data
+    )
 
-    def fetch_expired():
-        return (
-            supabase_client.table("user_inventory")
-            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
-            .eq("user_id", user_id)
-            .lt("expiry_date", (today))
-            .execute().data
-        )
+    # Fetch expired items separately
+    expired_items = (
+        supabase_client.table("user_inventory")
+        .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
+        .eq("user_id", user_id)
+        .lt("expiry_date", today.isoformat())
+        .execute().data
+    )
 
-    def fetch_this_month():
-        return (
-            supabase_client.table("user_inventory")
-            .select("item_id, quantity_value, quantity_unit, expiry_date, items(item_name)")
-            .eq("user_id", user_id)
-            .gte("expiry_date", first_of_month.isoformat())
-            .lte("expiry_date", last_of_month.isoformat())
-            .order("expiry_date")
-            .execute().data
-        )
+    notifications["expired"] = expired_items
+    notifications["today"] = []
+    notifications["2 days"] = []
+    notifications["1 week"] = []
+    notifications["this_month"] = []
 
-    notifications["this_month"] = fetch_this_month()
-    notifications["1 week"] = fetch_range(3, 7)
-    notifications["2 days"] = fetch_range(1, 2)
-    notifications["today"] = fetch_range(0, 0)
-    notifications["expired"] = fetch_expired()
+    for item in all_items:
+        expiry = date.fromisoformat(item["expiry_date"])
+        delta_days = (expiry - today).days
+
+        if delta_days == 0:
+            notifications["today"].append(item)
+        elif 1 <= delta_days <= 2:
+            notifications["2 days"].append(item)
+        elif 3 <= delta_days <= 7:
+            notifications["1 week"].append(item)
+        # Only include items after 7 days but still within this month
+        elif 8 <= delta_days and first_of_month <= expiry <= last_of_month:
+            notifications["this_month"].append(item)
 
     return notifications
+
