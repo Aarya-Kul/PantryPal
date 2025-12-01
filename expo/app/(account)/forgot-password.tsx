@@ -2,15 +2,16 @@
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from "react-native";
+import { API_BASE_URL } from "../../config/api";
 
 const ForgotPasswordScreen: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -25,7 +26,7 @@ const ForgotPasswordScreen: React.FC = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/forgot_password", {
+      const res = await fetch(`${API_BASE_URL}/api/forgot_password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),

@@ -12,11 +12,12 @@ import {
 
 import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "../../config/api";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+// Use localhost for web; change to your LAN IP if testing on device.
 
 export default function HomeScreen() {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
 
   // --- State ---
   const [stats, setStats] = useState<Record<string, { value: number; goal: number | null }> | null>(null);
@@ -89,11 +90,11 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Welcome + notifications */}
+        {/* Top section: welcome + notifications */}
         <View style={styles.stepContainer}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>
-              Welcome{user?.name ? `, ${user.name}` : ""}!
+              Welcome!
             </Text>
             <HelloWave />
           </View>
@@ -191,7 +192,6 @@ export default function HomeScreen() {
                   </View>
                 );
               })}
-
             </View>
           )}
         </View>

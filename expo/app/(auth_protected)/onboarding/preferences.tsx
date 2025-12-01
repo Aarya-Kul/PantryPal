@@ -9,6 +9,7 @@ import {
   TextInput,
   View
 } from "react-native";
+import { API_BASE_URL } from "../../../config/api";
 import { useAuth } from "../../../context/AuthContext";
 
 type PreferenceItem = { id: number; name: string };
@@ -46,7 +47,7 @@ export default function PreferencesScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const resOptions = await fetch("http://127.0.0.1:8000/api/preference_options", {
+        const resOptions = await fetch(`${API_BASE_URL}/api/preference_options`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const dataOptions = await resOptions.json();
@@ -57,7 +58,7 @@ export default function PreferencesScreen() {
           .forEach(([category, items]) => items.forEach(item => (map[category][item.name] = item.id)));
         setNameToId(map);
 
-        const resExisting = await fetch("http://127.0.0.1:8000/api/get_preferences", {
+        const resExisting = await fetch(`${API_BASE_URL}/api/get_preferences`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (resExisting.ok) {
@@ -109,7 +110,7 @@ export default function PreferencesScreen() {
         cuisines: selected.cuisines.map(n => nameToId.cuisines[n]),
         dietary_restrictions: selected.dietary_restrictions.map(n => nameToId.dietary_restrictions[n]),
       };
-      const res = await fetch("http://127.0.0.1:8000/api/set_preferences", {
+      const res = await fetch(`${API_BASE_URL}/api/set_preferences`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(payload),

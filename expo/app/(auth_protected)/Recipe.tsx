@@ -10,6 +10,7 @@ import {
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { API_BASE_URL } from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
 
 type Ingredient = {
@@ -43,8 +44,6 @@ type Recipe = {
   min_days_to_expiry?: number | null;
   nutrition: Nutrition;
 };
-
-const API_BASE_URL = "http://127.0.0.1:8000"; // change if needed
 
 const StarRating: React.FC<{ rating?: number }> = ({ rating }) => {
   const safeRating = rating ?? 0;

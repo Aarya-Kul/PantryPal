@@ -13,6 +13,7 @@ import {
 import RNPickerSelect from "react-native-picker-select";
 
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "../../config/api";
 
 const ALLOWED_UNITS = [
   "grams", "kilograms", "milligrams", "ounces", "pounds",
@@ -44,7 +45,7 @@ const emptyForm: FormState = {
   expiry_date: "",
 };
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+// Use localhost for web; change to your LAN IP if testing on device.
 
 export default function InventoryScreen() {
   const { token } = useAuth();

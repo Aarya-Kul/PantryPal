@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useState
 } from "react";
+import { API_BASE_URL } from "../config/api";
 
 type AuthContextValue = {
   token: string | null;
@@ -49,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch("http://127.0.0.1:8000/api/login", {
+    const res = await fetch(`${API_BASE_URL}/api/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
