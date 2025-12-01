@@ -272,6 +272,11 @@ export default function InventoryScreen() {
                               <Text style={styles.badgeText}>Leftover</Text>
                             </View>
                           )}
+                          {item.quantity_value === 0 && (
+                            <View style={[styles.badge, { backgroundColor: "#CBD5E1" }]}>
+                              <Text style={[styles.badgeText, { color: "#0F172A" }]}>None available</Text>
+                            </View>
+                          )}
                           <View style={styles.badge}>
                             <Text style={styles.badgeText}>Expired</Text>
                           </View>
@@ -322,6 +327,11 @@ export default function InventoryScreen() {
                           {item.is_leftover && (
                             <View style={styles.leftoverBadge}>
                               <Text style={styles.badgeText}>Leftover</Text>
+                            </View>
+                          )}
+                          {item.quantity_value === 0 && (
+                            <View style={[styles.badge, { backgroundColor: "#CBD5E1" }]}>
+                              <Text style={[styles.badgeText, { color: "#0F172A" }]}>None available</Text>
                             </View>
                           )}
                         </View>

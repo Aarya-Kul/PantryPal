@@ -89,6 +89,12 @@ def send_password_reset(email: str):
 
     return True
 
+# clean quantity
+def clean_quantity(q):
+    if abs(q) < 0.001:   # treat extremely small values as zero
+        return 0
+    return round(q, 2)
+
 # edit inventory item
 def edit_inventory_item(user_id, item_id, expiry_date, quantity_value, quantity_unit):
     inventory_item_data = supabase_client.table("user_inventory").select(
@@ -119,6 +125,7 @@ def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, 
         logger.info("making call to llm to do conversion b/c units are different")
 
     quantity_value_after_deduct = inventory_item.data[0]["quantity_value"] - deduct_quantity_value
+    quantity_value_after_deduct = clean_quantity(quantity_value_after_deduct)
 
     if quantity_value_after_deduct <= 0:
         return remove_inventory_item(user_id, item_id, expiry_date)
@@ -188,7 +195,20 @@ def get_user_inventory(user_id):
         "item_id, quantity_value, quantity_unit, expiry_date, items(item_name), is_leftover"
     ).eq("user_id", user_id).order("expiry_date").execute()
 
-    return response.data
+    cleaned = []
+    for item in response.data:
+        q = clean_quantity(item["quantity_value"])
+
+        # if value was corrected to 0, update database
+        if q == 0 and item["quantity_value"] != 0:
+            supabase_client.table("user_inventory").update({
+                "quantity_value": 0
+            }).eq("user_id", user_id).eq("item_id", item["item_id"]).eq("expiry_date", item["expiry_date"]).execute()
+
+        item["quantity_value"] = q
+        cleaned.append(item)
+
+    return cleaned
 
 # get leftovers
 def get_leftovers(user_id):
@@ -359,16 +379,22 @@ def add_nutrition_info(user_id, recipe_nutrition):
 
     return response.data[0]
 
+# get nutrient statistics
 def get_nutrient_statistics(user_id, reference_date=None):
     if not reference_date:
         reference_date = date.today().isoformat()
 
+    # --- Fetch macronutrient list ---
     macronutrients_resp = supabase_client.table("macronutrients") \
         .select("macronutrient_id, macronutrient_name") \
         .execute()
 
-    macronutrient_map = {row["macronutrient_id"]: row["macronutrient_name"] for row in macronutrients_resp.data or []}
+    macronutrient_map = {
+        row["macronutrient_id"]: row["macronutrient_name"]
+        for row in macronutrients_resp.data or []
+    }
 
+    # --- Fetch user goals ---
     goals_resp = supabase_client.table("user_macronutrient_preferences") \
         .select("macronutrient_id, goal") \
         .eq("user_id", user_id) \
@@ -380,6 +406,7 @@ def get_nutrient_statistics(user_id, reference_date=None):
         if name:
             goals_map[name] = float(row.get("goal") or 0)
 
+    # --- Fetch consumed nutrients ---
     nutrition_resp = supabase_client.table("user_nutrition") \
         .select("*") \
         .eq("user_id", user_id) \
@@ -388,8 +415,16 @@ def get_nutrient_statistics(user_id, reference_date=None):
     
     rows = nutrition_resp.data or []
     logger.info(rows)
+
     if not rows:
-        return {name: 0.0 for name in macronutrient_map.values()}
+        # Return zeroes + goals
+        return {
+            name: {
+                "value": 0.0,
+                "goal": goals_map.get(name)
+            }
+            for name in macronutrient_map.values()
+        }
 
     totals = {
         "protein": sum(r.get("protein", 0) for r in rows),
@@ -401,36 +436,46 @@ def get_nutrient_statistics(user_id, reference_date=None):
     }
 
     result = {}
+
     for mac_id, name in macronutrient_map.items():
         nutrient_key = None
-        if "protein" in name.lower():
+        lname = name.lower()
+
+        if "protein" in lname:
             nutrient_key = "protein"
-        elif "carb" in name.lower():
+        elif "carb" in lname:
             nutrient_key = "carbs"
-        elif "fat" in name.lower():
+        elif "fat" in lname:
             nutrient_key = "fats"
-        elif "dairy" in name.lower():
+        elif "dairy" in lname:
             nutrient_key = "dairy"
-        elif "veggie" in name.lower():
+        elif "veggie" in lname:
             nutrient_key = "veggies"
-        elif "fruit" in name.lower():
+        elif "fruit" in lname:
             nutrient_key = "fruits"
+
+        goal = goals_map.get(name)
 
         if nutrient_key:
             total = totals.get(nutrient_key, 0)
-            goal = goals_map.get(name)
-            if goal and goal > 0:
-                if name.lower().startswith("low_"):
-                    # lower is better: percentage = goal / consumed
-                    result[name] = round(goal / max(total, 1), 5)
-                else:
-                    # higher is better: percentage = consumed / goal
-                    result[name] = round(total / goal, 5)
-            else:
-                result[name] = total
-        else:
-            result[name] = sum(totals.values())
 
+            # Compute percentage or raw total
+            if goal and goal > 0:
+                if lname.startswith("low_"):
+                    computed_value = round(goal / max(total, 1), 5)
+                else:
+                    computed_value = round(total / goal, 5)
+            else:
+                computed_value = total
+        else:
+            # Fallback: sum of everything
+            total = sum(totals.values())
+            computed_value = total
+
+        result[name] = {
+            "value": computed_value,
+            "goal": goal
+        }
 
     return result
 
