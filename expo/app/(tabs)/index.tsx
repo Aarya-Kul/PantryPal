@@ -1,136 +1,135 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  TextInput,
+  View
 } from "react-native";
 
 import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
+import RNPickerSelect from "react-native-picker-select";
 
 // Use localhost for web; change to your LAN IP if testing on device.
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+const ALLOWED_UNITS = [
+  "grams",
+  "kilograms",
+  "milligrams",
+  "ounces",
+  "pounds",
+  "milliliters",
+  "liters",
+  "teaspoons",
+  "tablespoons",
+  "fluid_ounces",
+  "cups",
+  "pints",
+  "quarts",
+  "gallons",
+  "units",
+];
+
 export default function HomeScreen() {
   const { token, user } = useAuth();
 
+  // --- State ---
   const [stats, setStats] = useState<Record<string, number> | null>(null);
+  const [expiredCount, setExpiredCount] = useState<number | null>(null);
+  const [expiringCount, setExpiringCount] = useState<number | null>(null);
+
+  const [expiredLoading, setExpiredLoading] = useState(false);
+  const [expiredError, setExpiredError] = useState(false);
+  const [expiringLoading, setExpiringLoading] = useState(false);
+  const [expiringError, setExpiringError] = useState(false);
+
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState<string | null>(null);
 
-  const [expiringCount, setExpiringCount] = useState<number | null>(null);
-  const [expiringLoading, setExpiringLoading] = useState(false);
-  const [expiringError, setExpiringError] = useState<string | null>(null);
+  const [leftoverModalVisible, setLeftoverModalVisible] = useState(false);
+  const [leftoverForm, setLeftoverForm] = useState({
+    item_name: "",
+    quantity_value: "",
+    quantity_unit: "",
+    expiry_date: "",
+  });
+  const [leftoverSaving, setLeftoverSaving] = useState(false);
 
-  const [expiredCount, setExpiredCount] = useState<number | null>(null);
-  const [expiredLoading, setExpiredLoading] = useState(false);
-  const [expiredError, setExpiredError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!token) {
-        setStats(null);
-        return;
-      }
-      try {
-        setStatsLoading(true);
-        const res = await fetch(`${API_BASE_URL}/api/get_nutrient_statistics`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || `Failed to load (${res.status})`);
-        }
-        const data = await res.json();
-        setStats(data || {});
-      } catch (e: any) {
-        setStatsError(e.message || "Error loading nutrient statistics");
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-
-    const fetchExpiring = async () => {
-      if (!token) {
-        setExpiringCount(null);
-        return;
-      }
-      try {
-        setExpiringLoading(true);
-        const res = await fetch(`${API_BASE_URL}/api/get_expiring_items`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          throw new Error(`Failed (${res.status})`);
-        }
-        const data = await res.json();
-        // data expected to be { "1 week": [...], "2 days": [...] }
-        const count = Object.values(data || {}).reduce(
-          (sum: number, arr: any) => {
-            if (Array.isArray(arr)) return sum + arr.length;
-            return sum;
-          },
-          0
-        );
-        setExpiringCount(count);
-      } catch (e: any) {
-        setExpiringError(e.message || "Error loading expiring items");
-      } finally {
-        setExpiringLoading(false);
-      }
-    };
-
-    const fetchExpiredFromInventory = async () => {
-      if (!token) {
-        setExpiredCount(null);
-        return;
-      }
-      try {
-        setExpiredLoading(true);
-        const res = await fetch(`${API_BASE_URL}/api/get_user_inventory`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) {
-          throw new Error(`Failed (${res.status})`);
-        }
-        const data = await res.json();
-        const inventory = (data && data.inventory) || [];
-        const todayStr = new Date().toISOString().slice(0, 10);
-
-        const count = inventory.reduce((sum: number, item: any) => {
-          const expiry = item?.expiry_date as string | undefined;
-          if (expiry && expiry < todayStr) {
-            return sum + 1;
-          }
-          return sum;
-        }, 0);
-
-        setExpiredCount(count);
-      } catch (e: any) {
-        setExpiredError(e.message || "Error loading expired items");
-      } finally {
-        setExpiredLoading(false);
-      }
-    };
-
-    fetchStats();
-    fetchExpiring();
-    fetchExpiredFromInventory();
-  }, [token]);
-
+  // --- Helper functions ---
   function pluralize(count: number, singular: string, plural: string) {
     return count === 1 ? singular : plural;
   }
 
+  // --- Fetch stats ---
+  const refreshStats = useCallback(async () => {
+    if (!token) return;
+
+    setStatsLoading(true);
+    setExpiredLoading(true);
+    setExpiringLoading(true);
+
+    try {
+      // Fetch nutrient stats
+      const resStats = await fetch(`${API_BASE_URL}/api/get_nutrient_statistics`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resStats.ok) throw new Error("Failed to fetch stats");
+      const statsData = await resStats.json();
+      setStats(statsData);
+
+      // Fetch inventory for expired items
+      const resInv = await fetch(`${API_BASE_URL}/api/get_user_inventory`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resInv.ok) throw new Error("Failed to fetch inventory");
+      const inv = (await resInv.json())?.inventory || [];
+      const todayStr = new Date().toISOString().slice(0, 10);
+      setExpiredCount(inv.filter((i: any) => i.expiry_date < todayStr).length);
+
+      // Fetch expiring items
+      const resExp = await fetch(`${API_BASE_URL}/api/get_expiring_items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!resExp.ok) throw new Error("Failed to fetch expiring items");
+      const data = await resExp.json();
+      const count = Object.values(data).reduce(
+        (sum: number, arr: any) => sum + (Array.isArray(arr) ? arr.length : 0),
+        0
+      );
+      setExpiringCount(count);
+    } catch (err) {
+      console.error(err);
+      setStatsError("Failed to load stats");
+      setExpiredError(true);
+      setExpiringError(true);
+    } finally {
+      setStatsLoading(false);
+      setExpiredLoading(false);
+      setExpiringLoading(false);
+    }
+  }, [token]);
+
+  // Refresh on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      refreshStats();
+    }, [refreshStats])
+  );
+
+  // --- Render ---
   return (
     <>
       <View style={styles.container}>
         <ScrollView contentContainerStyle={styles.content}>
-          {/* Top section: welcome + notifications */}
+          {/* Welcome + notifications */}
           <View style={styles.stepContainer}>
             <View style={styles.titleContainer}>
               <Text style={styles.title}>
@@ -139,7 +138,7 @@ export default function HomeScreen() {
               <HelloWave />
             </View>
 
-            {/* NEW: Expired items card (links to inventory) */}
+            {/* Expired items card */}
             {token &&
               (expiredLoading ||
                 expiredError ||
@@ -164,17 +163,16 @@ export default function HomeScreen() {
                         {pluralize(expiredCount, "item", "items")}
                       </Text>
                       <Text style={styles.subtle}>
-                        These items are past their expiry date. Do not eat
-                        them. Tap to open your inventory, safely discard them,
-                        and try generating recipes earlier next time to use
-                        similar items before they expire.
+                        These items are past their expiry date. Do not eat them. Tap to open your
+                        inventory, safely discard them, and try generating recipes earlier next
+                        time.
                       </Text>
                     </View>
                   ) : null}
                 </Pressable>
               )}
 
-            {/* EXISTING: Soon-to-expire card (unchanged, links to notifications) */}
+            {/* Soon-to-expire card */}
             <Pressable
               onPress={() => router.push("/notifications")}
               style={({ pressed }) => [
@@ -190,13 +188,10 @@ export default function HomeScreen() {
                 <View style={styles.notificationsContent}>
                   <Text style={styles.itemName}>
                     You have {expiringCount} soon expiring{" "}
-                    {pluralize(expiringCount, "item", "items")}{" "}
+                    {pluralize(expiringCount, "item", "items")}
                   </Text>
                   <Text style={styles.subtle}>
-                    Tap to view details. Don&apos;t worry, these won&apos;t be
-                    used to curate recipes. Please remove these items from the
-                    inventory or add in a new item with an updated expiration
-                    date.
+                    Tap to view details. Please remove or update these items in the inventory.
                   </Text>
                 </View>
               ) : (
@@ -207,24 +202,18 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* Nutrient breakdown section */}
+          {/* Nutrient breakdown */}
           <View style={styles.stepContainer}>
             <Text style={styles.title}>Nutrient Breakdown</Text>
-
             {!token ? (
               <Text>Login to view your nutrient statistics.</Text>
             ) : statsLoading ? (
-              <ActivityIndicator
-                size="large"
-                color="#2BA84A"
-                style={{ marginTop: 40 }}
-              />
+              <ActivityIndicator size="large" color="#2BA84A" style={{ marginTop: 40 }} />
             ) : statsError ? (
               <Text>{statsError}</Text>
             ) : !stats || Object.keys(stats).length === 0 ? (
               <Text>
-                No nutrition data available for today. Generate a recipe to get
-                some!
+                No nutrition data available for today. Generate a recipe to get some!
               </Text>
             ) : (
               <View style={styles.statsContainer}>
@@ -232,9 +221,7 @@ export default function HomeScreen() {
                   <View style={styles.statRow} key={key}>
                     <Text style={styles.itemName}>{key}</Text>
                     {value < 1 ? (
-                      <Text style={styles.subtle}>
-                        {Math.round(value * 100)}%
-                      </Text>
+                      <Text style={styles.subtle}>{Math.round(value * 100)}%</Text>
                     ) : (
                       <Text style={styles.subtle}>{value}g</Text>
                     )}
@@ -244,7 +231,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Hidden FAB spacer so scroll area feels natural */}
+          {/* Hidden FAB spacer */}
           <View>
             <Pressable
               onPress={() => router.push("/snap-photo")}
@@ -259,7 +246,7 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* Real floating action button */}
+      {/* FABs */}
       <View>
         <Pressable
           onPress={() => router.push("/snap-photo")}
@@ -270,47 +257,152 @@ export default function HomeScreen() {
         >
           <Text style={styles.fabText}>+</Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => setLeftoverModalVisible(true)}
+          style={({ pressed }) => [
+            {
+              ...styles.fab,
+              right: undefined,
+              left: 30,
+              bottom: 30,
+              backgroundColor: "#F59E0B",
+            },
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
+          ]}
+        >
+          <Text style={styles.fabText}>L</Text>
+        </Pressable>
       </View>
+
+      {/* Leftover Modal */}
+      <Modal
+        transparent
+        animationType="slide"
+        visible={leftoverModalVisible}
+        onRequestClose={() => setLeftoverModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Add Leftover Item</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Item name"
+              value={leftoverForm.item_name}
+              onChangeText={(v) =>
+                setLeftoverForm((prev) => ({ ...prev, item_name: v }))
+              }
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Quantity"
+              keyboardType="numeric"
+              value={leftoverForm.quantity_value}
+              onChangeText={(v) =>
+                setLeftoverForm((prev) => ({ ...prev, quantity_value: v }))
+              }
+            />
+            <RNPickerSelect
+              onValueChange={(value) =>
+                setLeftoverForm((prev) => ({ ...prev, quantity_unit: value }))
+              }
+              placeholder={{ label: "Select unit", value: null }}
+              value={leftoverForm.quantity_unit}
+              items={ALLOWED_UNITS.map((u) => ({ label: u, value: u }))}
+              style={{ inputIOS: styles.input, inputAndroid: styles.input }}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Expiry YYYY-MM-DD"
+              value={leftoverForm.expiry_date}
+              onChangeText={(v) =>
+                setLeftoverForm((prev) => ({ ...prev, expiry_date: v }))
+              }
+            />
+
+            <View style={styles.modalActions}>
+              <Pressable
+                style={[styles.modalButton, styles.outlineButton]}
+                onPress={() => setLeftoverModalVisible(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: "#0F172A" }]}>
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modalButton, styles.filledButton]}
+                onPress={async () => {
+                  if (!token) return Alert.alert("Login required");
+                  const { item_name, quantity_value, quantity_unit, expiry_date } =
+                    leftoverForm;
+                  if (!item_name || !quantity_value || !quantity_unit || !expiry_date)
+                    return Alert.alert("Fill all fields");
+
+                  try {
+                    setLeftoverSaving(true);
+                    const res = await fetch(`${API_BASE_URL}/api/add_inventory_item`, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({
+                        items: [
+                          {
+                            item_name: item_name.trim(),
+                            quantity_value: Number(quantity_value),
+                            quantity_unit: quantity_unit.trim(),
+                            expiry_date: expiry_date.trim(),
+                            leftover: true,
+                          },
+                        ],
+                      }),
+                    });
+                    if (!res.ok) throw new Error(`Failed (${res.status})`);
+
+                    Alert.alert("Success", "Leftover added!");
+                    setLeftoverForm({
+                      item_name: "",
+                      quantity_value: "",
+                      quantity_unit: "",
+                      expiry_date: "",
+                    });
+                    setLeftoverModalVisible(false);
+                    refreshStats();
+                  } catch (err: any) {
+                    Alert.alert("Error", err.message || "Could not add leftover");
+                  } finally {
+                    setLeftoverSaving(false);
+                  }
+                }}
+                disabled={leftoverSaving}
+              >
+                {leftoverSaving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalButtonText}>Add</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
 
+// --- Styles ---
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  subtle: {
-    fontSize: 14,
-    color: "#64748B",
-  },
-  container: {
-    flex: 1, // important so ScrollView gets full height and can scroll
-    backgroundColor: "#F8FAFC",
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 160, // extra space so last stat row isn't under the FAB
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  statsContainer: {
-    marginTop: 6,
-    gap: 8,
-  },
+  title: { fontSize: 24, fontWeight: "700", color: "#0F172A" },
+  itemName: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
+  subtle: { fontSize: 14, color: "#64748B" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  content: { padding: 16, paddingBottom: 160 },
+  titleContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  stepContainer: { gap: 8, marginBottom: 8 },
+  statsContainer: { marginTop: 6, gap: 8 },
   statRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -342,10 +434,10 @@ const styles = StyleSheet.create({
   expiredNotificationsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "#FEF2F2", // matches inventory expiredCard background
+    backgroundColor: "#FEF2F2",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#FCA5A5", // matches inventory expiredCard border
+    borderColor: "#FCA5A5",
     padding: 14,
     marginBottom: 6,
     shadowColor: "#B91C1C",
@@ -353,13 +445,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
   },
-  reactLogo: {
-    height: 250,
-    width: 200,
-    bottom: 0,
-    left: 0,
-    position: "absolute",
-  },
+  notificationsContent: { gap: 6 },
   fabHidden: {
     opacity: 0,
     width: 60,
@@ -375,7 +461,6 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 30,
     right: 30,
     width: 60,
     height: 60,
@@ -387,12 +472,54 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
+    bottom: 30,
   },
-  fabText: {
+  fabText: { color: "#fff", fontSize: 36 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    width: "100%",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12, color: "#0F172A" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    fontSize: 14,
+    backgroundColor: "#F8FAFC",
+  },
+  modalActions: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginTop: 6 },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  outlineButton: {
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#fff",
+  },
+  filledButton: {
+    backgroundColor: "#2BA84A",
+  },
+  modalButtonText: {
+    fontWeight: "600",
+    fontSize: 14,
     color: "#fff",
-    fontSize: 36,
-  },
-  notificationsContent: {
-    gap: 6,
   },
 });

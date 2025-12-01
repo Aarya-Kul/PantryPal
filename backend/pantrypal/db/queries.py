@@ -131,7 +131,7 @@ def deduct_inventory_item(user_id, item_id, expiry_date, deduct_quantity_value, 
     return updated_inventory.data[0]
 
 # add an inventory item
-def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit):
+def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit, is_leftover=False):
     # insert item if it doesn't exist
     item_data = supabase_client.table("items").select("*").eq("item_name", item_name).execute()
 
@@ -153,7 +153,8 @@ def add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity
             "item_id": item_id,
             "quantity_value": quantity_value,
             "quantity_unit": quantity_unit,
-            "expiry_date": expiry_date
+            "expiry_date": expiry_date,
+            "is_leftover": is_leftover
         }).execute()
     
     else:
@@ -184,11 +185,20 @@ def remove_inventory_item(user_id, item_id, expiry_date):
 # get inventory
 def get_user_inventory(user_id):
     response = supabase_client.table("user_inventory").select(
-        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name)"
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name), is_leftover"
     ).eq("user_id", user_id).order("expiry_date").execute()
 
     return response.data
 
+# get leftovers
+def get_leftovers(user_id):
+    response = supabase_client.table("user_inventory").select(
+        "item_id, quantity_value, quantity_unit, expiry_date, items(item_name), is_leftover"
+    ).eq("user_id", user_id).eq("is_leftover", True).order("expiry_date").execute()
+
+    return response.data
+
+# get inventory unit map
 def get_inventory_unit_mapping(user_id):
     inventory_unit_mapping = []
     user_inventory = get_user_inventory(user_id)

@@ -58,8 +58,9 @@ def add_inventory_item_route():
                 expiry_date = item["expiry_date"]
                 quantity_value = item["quantity_value"]
                 quantity_unit = item["quantity_unit"]
+                is_leftover = item.get("leftover", False)
 
-                to_add = add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit)
+                to_add = add_inventory_item(user_id, item_name, expiry_date, quantity_value, quantity_unit, is_leftover)
                 added_items.append(to_add)
 
             except Exception as e:
