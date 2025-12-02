@@ -21,4 +21,4 @@ function getDevBaseUrl() {
 
 export const API_BASE_URL = __DEV__
   ? getDevBaseUrl()
-  : "https://your-production-api-domain.com"; // change for prod
+  : "https://pantrypal-4nnr.onrender.com"; // change for prod
