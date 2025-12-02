@@ -14,12 +14,9 @@ import { HelloWave } from "@/components/hello-wave";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "../../config/api";
 
-// Use localhost for web; change to your LAN IP if testing on device.
-
 export default function HomeScreen() {
   const { token } = useAuth();
 
-  // --- State ---
   const [stats, setStats] = useState<
     Record<string, { value: number; goal: number | null }> | null
   >(null);
@@ -36,7 +33,6 @@ export default function HomeScreen() {
     return count === 1 ? singular : plural;
   }
 
-  // --- Fetch stats ---
   const refreshStats = useCallback(async () => {
     if (!token) return;
 
@@ -88,18 +84,15 @@ export default function HomeScreen() {
     }, [refreshStats])
   );
 
-  // --- Render ---
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Top section: welcome + notifications */}
         <View style={styles.stepContainer}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Welcome!</Text>
             <HelloWave />
           </View>
 
-          {/* Expired items card */}
           {token &&
             (expiredLoading || expiredError || (expiredCount !== null && expiredCount > 0)) && (
               <Pressable
@@ -128,7 +121,6 @@ export default function HomeScreen() {
               </Pressable>
             )}
 
-          {/* Soon-to-expire card */}
           <Pressable
             onPress={() => router.push("/notifications")}
             style={({ pressed }) => [
@@ -157,7 +149,6 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Nutrient breakdown */}
         <View style={styles.stepContainer}>
           <Text style={styles.title}>Nutrient Breakdown</Text>
           {!token ? (
@@ -189,7 +180,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Hidden FAB spacer */}
         <View>
           <Pressable
             onPress={() => router.push("/snap-photo")}
@@ -203,7 +193,6 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* FAB */}
       <Pressable
         onPress={() => router.push("/snap-photo")}
         style={({ pressed }) => [
@@ -217,13 +206,11 @@ export default function HomeScreen() {
   );
 }
 
-// --- Styles ---
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { padding: 16, paddingBottom: 160 },
   stepContainer: { gap: 8, marginBottom: 8 },
 
-  // --- Title + wave ---
   titleContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -235,13 +222,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     color: "#0F172A",
-    flexShrink: 1, // allow wrapping on narrow screens
+    flexShrink: 1,
   },
 
-  // --- Stats cards ---
   statsContainer: { marginTop: 6, gap: 8 },
   statRow: {
-    flexDirection: "column", // vertical layout for mobile wrap
+    flexDirection: "column",
     backgroundColor: "#fff",
     borderRadius: 14,
     borderWidth: 1,
@@ -254,7 +240,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
   },
 
-  // --- Notifications cards ---
   notificationsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -268,6 +253,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
+    flexShrink: 1,           // ← Added
   },
   expiredNotificationsRow: {
     flexDirection: "row",
@@ -282,10 +268,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
+    flexShrink: 1,           // ← Added
   },
-  notificationsContent: { gap: 6 },
+  notificationsContent: {
+    gap: 6,
+    flexShrink: 1,           // ← Added
+    flexWrap: "wrap",        // ← Added
+  },
 
-  // --- FAB ---
   fabHidden: {
     opacity: 0,
     width: 60,
@@ -316,7 +306,6 @@ const styles = StyleSheet.create({
   },
   fabText: { color: "#fff", fontSize: 36 },
 
-  // --- Text ---
   itemName: { fontSize: 16, fontWeight: "600", color: "#0F172A" },
   subtle: { fontSize: 14, color: "#64748B" },
 });

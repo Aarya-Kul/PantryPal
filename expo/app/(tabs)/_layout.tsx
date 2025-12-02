@@ -1,12 +1,12 @@
 // app/(tabs)/_layout.tsx
 import { AiDisclaimerButton } from "@/components/ai-disclaimer-button";
-import { HapticTab } from "@/components/haptic-tab";
 import { LogoutButton } from "@/components/logout-button";
 import { NotificationsButton } from "@/components/notifications-button";
 import { PreferencesButton } from "@/components/preferences-button";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import * as Haptics from "expo-haptics";
 import { Redirect, Tabs } from "expo-router";
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -32,12 +32,12 @@ export default function TabLayout() {
     );
   }
 
-  // If not logged in, don't render Tabs at all — go to login
+  // If not logged in → send to login
   if (!token) {
     return <Redirect href="/login" />;
   }
 
-  // Otherwise, user is authenticated --> show tabs
+  // Authenticated → show tabs
   return (
     <Tabs
       screenOptions={{
@@ -51,34 +51,39 @@ export default function TabLayout() {
           </View>
         ),
         headerTitleAlign: "left",
-        headerTitleStyle: { flexShrink: 1 }, 
+        headerTitleStyle: { flexShrink: 1 },
       }}
     >
 
+      {/* Inventory Tab */}
       <Tabs.Screen
         name="inventory"
         options={{
           title: "Inventory",
           tabBarIcon: ({ color }) => (
-            <HapticTab>
-              <IconSymbol size={28} name="cart.fill" color={color} />
-            </HapticTab>
+            <IconSymbol size={28} name="cart.fill" color={color} />
           ),
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
 
+      {/* Home Tab */}
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
-            <HapticTab>
-              <IconSymbol size={28} name="house.fill" color={color} />
-            </HapticTab>
+            <IconSymbol size={28} name="house.fill" color={color} />
           ),
+        }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
         }}
       />
 
+      {/* Recipes Tab */}
       <Tabs.Screen
         name="recipes"
         options={{
@@ -87,7 +92,11 @@ export default function TabLayout() {
             <IconSymbol size={28} name="fork.knife" color={color} />
           ),
         }}
+        listeners={{
+          tabPress: () => Haptics.selectionAsync(),
+        }}
       />
+
     </Tabs>
   );
 }
